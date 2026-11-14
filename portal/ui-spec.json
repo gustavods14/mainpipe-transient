@@ -1,0 +1,855 @@
+{
+  "spec_version": "1.0",
+  "kit_version": "3.0.0",
+  "slug": "mainpipe-transient",
+  "layout": "solver-2col",
+  "inputs": {
+    "groups": [
+      {
+        "id": "datos",
+        "label": "Datos",
+        "presentation": "tab",
+        "fields": [
+          {
+            "key": "use_profile",
+            "label": "Usar perfil del trazado",
+            "unit": "—",
+            "type": "toggle",
+            "contract_path": "request.geometry",
+            "default": false,
+            "hint": "Apagado: «Desactivado: tubería horizontal con una sola cota.» → geometry = \"horizontal\" y el portal envía pipe_elevation_m = 0 sin mostrar el campo; la pestaña Perfil queda bloqueada. Encendido: «Activado: longitud y cotas desde la pestaña Perfil.» → geometry = \"profile\"; se ocultan Longitud y se habilita la pestaña Perfil (sin cambiar de pestaña). Al apagarlo, la tabla del perfil se conserva en pantalla pero no se envía."
+          },
+          {
+            "key": "reservoir_level_m",
+            "label": "Nivel del depósito",
+            "symbol": "H_dep",
+            "unit": "m",
+            "type": "number",
+            "contract_path": "request.reservoir_level_m",
+            "placeholder": "100",
+            "hint": "Interruptor apagado: «Medido desde el eje de la tubería.» (pipe_elevation_m = 0, así que debe ser ≥ 0). Encendido: «En el mismo datum que las cotas del perfil.»",
+            "validation": {
+              "required": true
+            }
+          },
+          {
+            "key": "length_m",
+            "label": "Longitud",
+            "symbol": "L",
+            "unit": "m",
+            "type": "number",
+            "contract_path": "request.length_m",
+            "placeholder": "1000",
+            "hint": "Solo con el interruptor apagado; con perfil se muestra «Longitud y cotas se toman de la pestaña Perfil.» y L es la última progresiva.",
+            "validation": {
+              "min": 0,
+              "required": true
+            }
+          },
+          {
+            "key": "inner_diameter_mm",
+            "label": "Diámetro interior",
+            "symbol": "D",
+            "unit": "mm",
+            "type": "number",
+            "contract_path": "request.inner_diameter_mm",
+            "placeholder": "300",
+            "validation": {
+              "min": 0,
+              "required": true
+            }
+          },
+          {
+            "key": "wave_speed_ms",
+            "label": "Celeridad de la onda",
+            "symbol": "a",
+            "unit": "m/s",
+            "type": "number",
+            "contract_path": "request.wave_speed_ms",
+            "placeholder": "1000",
+            "hint": "0 < a ≤ 1500 m/s.",
+            "validation": {
+              "min": 0,
+              "max": 1500,
+              "required": true
+            }
+          },
+          {
+            "key": "darcy_friction_factor",
+            "label": "Factor de fricción de Darcy",
+            "symbol": "f",
+            "unit": "—",
+            "type": "number",
+            "contract_path": "request.darcy_friction_factor",
+            "placeholder": "0.02",
+            "hint": "0 ≤ f ≤ 0.1; f = 0 calcula sin fricción.",
+            "validation": {
+              "min": 0,
+              "max": 0.1,
+              "required": true
+            }
+          },
+          {
+            "key": "pn_bar",
+            "label": "Presión nominal (PN)",
+            "symbol": "PN",
+            "unit": "bar",
+            "type": "number",
+            "contract_path": "request.pn_bar",
+            "placeholder": "25",
+            "validation": {
+              "min": 0,
+              "required": true
+            }
+          },
+          {
+            "key": "initial_flow_lps",
+            "label": "Caudal inicial",
+            "symbol": "Q₀",
+            "unit": "L/s",
+            "type": "number",
+            "contract_path": "request.initial_flow_lps",
+            "placeholder": "100",
+            "hint": "Caudal antes de la maniobra; la ley de cierre debe empezar con este valor en t = 0.",
+            "validation": {
+              "min": 0,
+              "required": true
+            }
+          },
+          {
+            "key": "min_allowed_pressure_head_m",
+            "label": "Presión mínima admisible",
+            "symbol": "p_mín/γ",
+            "unit": "m.c.a.",
+            "type": "number",
+            "contract_path": "request.min_allowed_pressure_head_m",
+            "default": -10.0,
+            "validation": {
+              "min": -10.33,
+              "max": 0
+            }
+          },
+          {
+            "key": "density_kgm3",
+            "label": "Densidad del agua",
+            "symbol": "ρ",
+            "unit": "kg/m³",
+            "type": "number",
+            "contract_path": "request.density_kgm3",
+            "default": 1000.0,
+            "validation": {
+              "min": 0
+            }
+          },
+          {
+            "key": "gravity_ms2",
+            "label": "Gravedad",
+            "symbol": "g",
+            "unit": "m/s²",
+            "type": "number",
+            "contract_path": "request.gravity_ms2",
+            "default": 9.81,
+            "validation": {
+              "min": 9.7,
+              "max": 9.9
+            }
+          },
+          {
+            "key": "n_reaches",
+            "label": "Número de tramos",
+            "symbol": "N",
+            "unit": "—",
+            "type": "integer",
+            "contract_path": "request.n_reaches",
+            "default": 20,
+            "hint": "Entero par entre 10 y 200.",
+            "validation": {
+              "min": 10,
+              "max": 200
+            }
+          },
+          {
+            "key": "duration_s",
+            "label": "Duración de la simulación",
+            "symbol": "T",
+            "unit": "s",
+            "type": "number",
+            "contract_path": "request.duration_s",
+            "placeholder": "automática: T_c + 5·(4L/a)",
+            "hint": "Vacío = automática. Mínimo T_c + 2L/a; tope de 10 000 pasos de cálculo (D-57). Si la duración pedida (o la automática) no cabe con esta malla, el cálculo responde 422 con la duración máxima admisible, que se puede copiar tal cual (HU-1.6 crit. 13)."
+          }
+        ]
+      },
+      {
+        "id": "ley-cierre",
+        "label": "Ley de cierre",
+        "presentation": "tab",
+        "fields": [
+          {
+            "key": "closure_law",
+            "label": "Ley de cierre de la válvula",
+            "unit": "—",
+            "type": "table",
+            "contract_path": "request.closure_time_s",
+            "hint": "Tabla de 2 a 20 puntos (t, Q) que termina con Q = 0. La primera fila es fija y de solo lectura: t = 0 y Q = Q₀, copiado de initial_flow_lps (no se puede borrar). Las dos columnas viajan como listas paralelas closure_time_s y closure_flow_lps.",
+            "columns": [
+              {
+                "key": "closure_time_s",
+                "label": "Tiempo",
+                "symbol": "t",
+                "unit": "s",
+                "type": "number",
+                "contract_path": "request.closure_time_s[]",
+                "hint": "Empieza en 0; estrictamente creciente.",
+                "validation": {
+                  "min": 0,
+                  "required": true
+                }
+              },
+              {
+                "key": "closure_flow_lps",
+                "label": "Caudal",
+                "symbol": "Q",
+                "unit": "L/s",
+                "type": "number",
+                "contract_path": "request.closure_flow_lps[]",
+                "hint": "0 ≤ Q ≤ Q₀; el último debe ser 0.",
+                "validation": {
+                  "min": 0,
+                  "required": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "perfil",
+        "label": "Perfil",
+        "presentation": "tab",
+        "fields": [
+          {
+            "key": "profile",
+            "label": "Perfil longitudinal",
+            "unit": "—",
+            "type": "table",
+            "contract_path": "request.profile_x_m",
+            "hint": "Pestaña bloqueada (con candado y el aviso «Activa “Usar perfil del trazado” en Datos») mientras el interruptor esté apagado. De 2 a 500 puntos; x empieza en 0 y crece estrictamente; z(0) ≤ nivel del depósito. Las dos columnas viajan como listas paralelas profile_x_m y profile_z_m.",
+            "columns": [
+              {
+                "key": "profile_x_m",
+                "label": "Progresiva",
+                "symbol": "x",
+                "unit": "m",
+                "type": "number",
+                "contract_path": "request.profile_x_m[]",
+                "validation": {
+                  "min": 0,
+                  "required": true
+                }
+              },
+              {
+                "key": "profile_z_m",
+                "label": "Cota",
+                "symbol": "z",
+                "unit": "m",
+                "type": "number",
+                "contract_path": "request.profile_z_m[]",
+                "validation": {
+                  "required": true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "actions": [
+    {
+      "id": "calcular",
+      "label": "Calcular",
+      "function": "solve",
+      "trigger": "button",
+      "enabled_when": "campos obligatorios completos; ley de cierre con al menos 2 puntos; con «Usar perfil del trazado» encendido, tabla de perfil con al menos 2 puntos"
+    }
+  ],
+  "results": {
+    "status": "response.status",
+    "kpis": [
+      {
+        "contract_path": "response.pressure_head_max_global_m",
+        "label": "Presión máxima",
+        "symbol": "p_máx/γ",
+        "unit": "m.c.a.",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.pressure_head_max_global_x_m",
+        "label": "Presión máxima — progresiva",
+        "symbol": "x",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.pressure_head_max_global_time_s",
+        "label": "Presión máxima — instante",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.pressure_head_min_global_m",
+        "label": "Presión mínima",
+        "symbol": "p_mín/γ",
+        "unit": "m.c.a.",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.pressure_head_min_global_x_m",
+        "label": "Presión mínima — progresiva",
+        "symbol": "x",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.pressure_head_min_global_time_s",
+        "label": "Presión mínima — instante",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.pressure_max_pn_ratio_pct",
+        "label": "Presión máxima / PN",
+        "unit": "%",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.pn_head_m",
+        "label": "PN en altura",
+        "unit": "m.c.a.",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.head_valve_max_m",
+        "label": "H máx. en la válvula",
+        "symbol": "H_máx",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.head_valve_max_time_s",
+        "label": "H máx. en la válvula — instante",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.head_valve_min_m",
+        "label": "H mín. en la válvula",
+        "symbol": "H_mín",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.head_valve_min_time_s",
+        "label": "H mín. en la válvula — instante",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.velocity_initial_ms",
+        "label": "Velocidad inicial",
+        "symbol": "V₀",
+        "unit": "m/s",
+        "decimals": 3
+      },
+      {
+        "contract_path": "response.head_loss_m",
+        "label": "Pérdida de carga en régimen",
+        "symbol": "h_f",
+        "unit": "m",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.area_m2",
+        "label": "Área",
+        "symbol": "A",
+        "unit": "m²",
+        "decimals": 4
+      },
+      {
+        "contract_path": "response.length_m",
+        "label": "Longitud",
+        "symbol": "L",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.reflection_time_s",
+        "label": "Tiempo de reflexión",
+        "symbol": "2L/a",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.wave_period_s",
+        "label": "Periodo de la onda",
+        "symbol": "4L/a",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.closure_duration_s",
+        "label": "Tiempo de cierre",
+        "symbol": "T_c",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.dx_m",
+        "label": "Paso espacial",
+        "symbol": "Δx",
+        "unit": "m",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.dt_s",
+        "label": "Paso de tiempo",
+        "symbol": "Δt",
+        "unit": "s",
+        "decimals": 4
+      },
+      {
+        "contract_path": "response.n_reaches",
+        "label": "Tramos",
+        "symbol": "N",
+        "unit": "—",
+        "decimals": 0
+      },
+      {
+        "contract_path": "response.n_steps",
+        "label": "Pasos de cálculo",
+        "unit": "—",
+        "decimals": 0
+      },
+      {
+        "contract_path": "response.duration_s",
+        "label": "Duración efectiva",
+        "symbol": "T",
+        "unit": "s",
+        "decimals": 2
+      },
+      {
+        "contract_path": "response.friction_number",
+        "label": "Número de fricción del tramo",
+        "symbol": "φ",
+        "unit": "—",
+        "decimals": 4
+      },
+      {
+        "contract_path": "response.maneuver_type",
+        "label": "Tipo de maniobra",
+        "unit": "—"
+      },
+      {
+        "contract_path": "response.joukowsky_head_rise_m",
+        "label": "Sobrepresión de Joukowsky",
+        "symbol": "ΔH = a·V₀/g",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.michaud_head_rise_m",
+        "label": "Sobrepresión de Michaud",
+        "symbol": "ΔH = 2·L·V₀/(g·T_c)",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.full_pulse_length_m",
+        "label": "Longitud con pulso completo",
+        "symbol": "L − a·T_c/2",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.theoretical_head_rise_m",
+        "label": "Sobrepresión teórica",
+        "symbol": "ΔH_teo",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.moc_head_rise_valve_m",
+        "label": "Sobrepresión MOC en la válvula",
+        "symbol": "ΔH_MOC",
+        "unit": "m",
+        "decimals": 1
+      },
+      {
+        "contract_path": "response.theory_deviation_pct",
+        "label": "Diferencia MOC vs. teoría",
+        "unit": "%",
+        "decimals": 1
+      }
+    ],
+    "tables": [
+      {
+        "id": "envolventes",
+        "label": "Envolventes por progresiva",
+        "rows": "response.x_m",
+        "columns": [
+          {
+            "contract_path": "response.x_m[]",
+            "label": "Progresiva",
+            "symbol": "x",
+            "unit": "m",
+            "decimals": 1
+          },
+          {
+            "contract_path": "response.elevation_m[]",
+            "label": "Cota",
+            "symbol": "z",
+            "unit": "m",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.head_initial_m[]",
+            "label": "H régimen",
+            "unit": "m",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.head_max_m[]",
+            "label": "H máx.",
+            "unit": "m",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.head_min_m[]",
+            "label": "H mín.",
+            "unit": "m",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.pressure_head_max_m[]",
+            "label": "p/γ máx.",
+            "unit": "m.c.a.",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.pressure_head_min_m[]",
+            "label": "p/γ mín.",
+            "unit": "m.c.a.",
+            "decimals": 2
+          },
+          {
+            "contract_path": "response.x_is_node[]",
+            "label": "Nodo de cálculo",
+            "unit": "—"
+          }
+        ]
+      }
+    ],
+    "checks": {
+      "contract_path": "response.checks",
+      "by_code": {
+        "PN_EXCEEDED": {
+          "label": "Presión máxima sobre el PN",
+          "highlights": "presiones-progresiva"
+        },
+        "PN_NEAR_LIMIT": {
+          "label": "Presión máxima cerca del PN",
+          "highlights": "presiones-progresiva"
+        },
+        "COLUMN_SEPARATION_RISK": {
+          "label": "Riesgo de separación de columna",
+          "highlights": "presiones-progresiva"
+        },
+        "SUBATMOSPHERIC_PRESSURE": {
+          "label": "Presión subatmosférica",
+          "highlights": "presiones-progresiva"
+        },
+        "STEADY_NEGATIVE_PRESSURE": {
+          "label": "Presión negativa en régimen",
+          "highlights": "perfil-envolventes"
+        }
+      }
+    }
+  },
+  "charts": [
+    {
+      "id": "ley-cierre-entrada",
+      "label": "Vista previa de la ley de cierre",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "request.closure_time_s[]",
+        "label": "Tiempo",
+        "symbol": "t",
+        "unit": "s"
+      },
+      "series": [
+        {
+          "contract_path": "request.closure_flow_lps[]",
+          "label": "Caudal en la válvula",
+          "unit": "L/s",
+          "role": "valvula"
+        }
+      ],
+      "interactions": [
+        "se redibuja al editar la tabla, antes de calcular; tramos rectos entre puntos (interpolación lineal, HU-1.2)"
+      ]
+    },
+    {
+      "id": "perfil-entrada",
+      "label": "Vista previa del perfil",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "request.profile_x_m[]",
+        "label": "Progresiva",
+        "symbol": "x",
+        "unit": "m"
+      },
+      "series": [
+        {
+          "contract_path": "request.profile_z_m[]",
+          "label": "Tubería",
+          "unit": "m",
+          "role": "terreno"
+        },
+        {
+          "contract_path": "request.reservoir_level_m",
+          "label": "Nivel del depósito",
+          "unit": "m",
+          "role": "referencia"
+        }
+      ],
+      "interactions": [
+        "se redibuja al editar la tabla del perfil, antes de calcular (solo datos de entrada)"
+      ]
+    },
+    {
+      "id": "perfil-envolventes",
+      "label": "Altura piezométrica H(x)",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "response.x_m[]",
+        "label": "Progresiva",
+        "symbol": "x",
+        "unit": "m",
+        "decimals": 1
+      },
+      "series": [
+        {
+          "contract_path": "response.elevation_m[]",
+          "label": "Tubería",
+          "unit": "m",
+          "role": "terreno"
+        },
+        {
+          "contract_path": "response.head_initial_m[]",
+          "label": "H de régimen",
+          "unit": "m",
+          "role": "regimen"
+        },
+        {
+          "contract_path": "response.head_max_m[]",
+          "label": "Envolvente máx. (borde superior de la banda)",
+          "unit": "m",
+          "role": "banda-envolvente-sup"
+        },
+        {
+          "contract_path": "response.head_min_m[]",
+          "label": "Envolvente mín. (borde inferior de la banda)",
+          "unit": "m",
+          "role": "banda-envolvente-inf"
+        },
+        {
+          "contract_path": "response.frame_head_m[]",
+          "label": "H en el instante t",
+          "unit": "m",
+          "role": "instante"
+        }
+      ],
+      "interactions": [
+        "forma parte del panel «Transitorio» (D-58 a): una sola barra de reproducción arriba del panel y debajo cuatro pestañas — «Altura H(x)» (perfil-envolventes), «Presión p/γ(x)» (presiones-progresiva), «Válvula y L/2» (series-temporales-h) y «Caudales» (series-temporales-q) —; se ve un gráfico a la vez, a todo el ancho de la columna de resultados; cambiar de pestaña conserva el instante y la reproducción; la leyenda muestra solo las series del gráfico visible",
+        "el instante t (índice de fotograma k) es estado del panel «Transitorio», no de la página (D-58): lo comparten la barra, las cuatro pestañas y los botones «Ir a t» de los avisos; al llegar un resultado nuevo se detiene la reproducción y el instante vuelve a k = 0 (t = 0)",
+        "barra de reproducción (D-58, D-59): una sola fila, opaca (fondo --color-bg-surface); desde lg (≥ 1024 px) es sticky dentro de la columna de resultados con el mismo offset superior que la columna de entradas (lg:top-20); por debajo de lg es estática. Contiene: reproducir/pausa, fotograma anterior/siguiente, cursor (input range) sobre los índices de response.frame_time_s con lectura «t = … s» (2 decimales), velocidad ×0.1 / ×0.25 / ×0.5 / ×1 (×1 = tiempo real; por defecto ×0.25) y repetir en bucle (activado por defecto)",
+        "teclado (D-58): la barra llega a cualquier fotograma sin ratón. Con el foco en el cursor: ← / → un fotograma, Re Pág / Av Pág diez fotogramas, Inicio / Fin primer y último fotograma; cualquier movimiento del cursor detiene la reproducción. El cursor lleva aria-valuetext «t = … s». Reproducir/pausa, anterior/siguiente y bucle son botones nativos (Intro / Espacio); bucle y reproducir exponen aria-pressed",
+        "texto de fase debajo de la barra, fuera de la zona sticky (U-32): con tₐ = response.reflection_time_s / 2 (= L/a), ciclo = ⌊t / response.wave_period_s⌋ y τ = t − ciclo · response.wave_period_s, y sufijo « (ciclo n)» con n = ciclo + 1 cuando ciclo ≥ 1: (1) t < response.closure_duration_s, ciclo = 0 y τ < tₐ → «Cierre en curso: la onda de sobrepresión sale de la válvula hacia el depósito.»; (2) τ < tₐ → «La onda de sobrepresión viaja de la válvula al depósito.»; (3) τ < 2tₐ → «Reflexión en el depósito: la onda vuelve hacia la válvula y restituye la altura de régimen.»; (4) τ < 3tₐ → «Reflexión en la válvula cerrada: la onda de depresión viaja hacia el depósito.»; (5) resto → «La depresión se refleja en el depósito y vuelve hacia la válvula.»",
+        "botón «Ir a t = … s en el transitorio» en cada aviso de response.checks (D-58): t = checks[].time_s, salvo en COLUMN_SEPARATION_RISK, donde t = checks[].first_time_s (primer cruce del límite); en STEADY_NEGATIVE_PRESSURE t = 0. Rótulo con t a 2 decimales. Al pulsarlo: detiene la reproducción, fija el instante en el fotograma de response.frame_time_s más cercano a t (empate: el anterior), abre la pestaña de results.checks.by_code[code].highlights, desplaza la vista al panel «Transitorio» y deja el foco en el cursor de la barra. Si response.frame_time_s es null no se muestra el botón",
+        "colores, iguales en las cuatro pestañas (D-60; sin tokens nuevos): tubería (cota del eje) --color-chart-neutral continuo 2 px; régimen --color-chart-neutral discontinuo 1.5 px; envolventes como banda --color-chart-zone sin borde propio, con sus dos límites dibujados como líneas de 1 px en --color-chart-label; instante t --color-chart-marker (curva de 2.5 px en H(x) y p/γ(x), cursor vertical discontinuo en las series temporales); válvula, punto medio y depósito en --color-chart-series-1, -2 y -3 (--color-chart-series-3 solo para el depósito); PN y presión mínima admisible en presiones-progresiva (ver allí); máximo y mínimo globales de p/γ en --color-chart-operating con rótulo en --color-chart-label; Q = 0 en --color-chart-neutral discontinuo",
+        "líneas verticales punteadas en x = 0, x = L/2 y x = L con los colores de sus series temporales (--color-chart-series-3, -2 y -1), rotuladas arriba con su nombre — «depósito», «L/2», «válvula» — en --color-chart-label (D-60)",
+        "la serie «H en el instante t» es la fila k de response.frame_head_m",
+        "si response.frame_time_s es null (llamada con include_frames: false; el portal no la hace en esta pantalla) el panel muestra solo tubería, régimen, envolventes, límites y series temporales, sin barra, sin texto de fase, sin curva ni cursor del instante y sin botones «Ir a t»",
+        "si response.frame_stride > 1, nota bajo el panel: «Un fotograma cada N pasos de cálculo» con N = response.frame_stride",
+        "tooltip por progresiva con z, H y p/γ = H − z"
+      ]
+    },
+    {
+      "id": "presiones-progresiva",
+      "label": "Presión p/γ(x)",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "response.x_m[]",
+        "label": "Progresiva",
+        "symbol": "x",
+        "unit": "m",
+        "decimals": 1
+      },
+      "series": [
+        {
+          "contract_path": "response.pressure_head_initial_m[]",
+          "label": "p/γ de régimen",
+          "unit": "m.c.a.",
+          "role": "regimen"
+        },
+        {
+          "contract_path": "response.pressure_head_max_m[]",
+          "label": "Envolvente máx. (borde superior de la banda)",
+          "unit": "m.c.a.",
+          "role": "banda-envolvente-sup"
+        },
+        {
+          "contract_path": "response.pressure_head_min_m[]",
+          "label": "Envolvente mín. (borde inferior de la banda)",
+          "unit": "m.c.a.",
+          "role": "banda-envolvente-inf"
+        },
+        {
+          "contract_path": "response.frame_pressure_head_m[]",
+          "label": "p/γ en el instante t",
+          "unit": "m.c.a.",
+          "role": "instante"
+        },
+        {
+          "contract_path": "response.pn_head_m",
+          "label": "PN",
+          "unit": "m.c.a.",
+          "role": "limite"
+        },
+        {
+          "contract_path": "response.min_allowed_pressure_head_m",
+          "label": "Presión mínima admisible",
+          "unit": "m.c.a.",
+          "role": "limite"
+        },
+        {
+          "contract_path": "response.pressure_head_max_m[]",
+          "label": "Cruce del PN",
+          "unit": "m.c.a.",
+          "role": "cruce-limite"
+        },
+        {
+          "contract_path": "response.pressure_head_min_m[]",
+          "label": "Cruce de la presión mínima admisible",
+          "unit": "m.c.a.",
+          "role": "cruce-limite"
+        }
+      ],
+      "interactions": [
+        "forma parte del panel «Transitorio» (ver perfil-envolventes): barra única, cuatro pestañas, un gráfico a la vez; cambiar de pestaña conserva el instante y la reproducción",
+        "colores y verticales como en perfil-envolventes (D-60)",
+        "PN (response.pn_head_m) y presión mínima admisible (response.min_allowed_pressure_head_m, eco del límite usado en el cálculo, U-35; nunca el valor del formulario, que puede haber cambiado) como líneas horizontales de referencia (markLine) en --color-chart-label discontinuo 1.5 px, rotuladas «PN …» y «límite …» (1 decimal) en --color-chart-label, sin entrada en la leyenda (D-60)",
+        "--color-chart-critical solo donde una envolvente cruza un umbral, con el mismo predicado que los avisos danger (D-60, plan §1.5): en la progresiva j hay cruce del PN si response.pressure_head_max_m[j] > response.pn_head_m, y del límite si response.pressure_head_min_m[j] < response.min_allowed_pressure_head_m (desigualdades estrictas). Se marca cada j que cumple el predicado con un punto de 6 px y se une con un trazo de 2.5 px a la j siguiente si también lo cumple (tramo); no se interpola el punto exacto de cruce. Sin j que lo cumpla no hay rojo en el gráfico, y en ese caso tampoco hay aviso PN_EXCEEDED / COLUMN_SEPARATION_RISK (V-13). Las series «Cruce …» no tienen entrada en la leyenda ni tooltip propio",
+        "marcadores en el máximo y el mínimo globales (response.pressure_head_max_global_x_m / _m, response.pressure_head_min_global_x_m / _m) en --color-chart-operating, rotulados «máx …» y «mín …» en --color-chart-label",
+        "la curva del instante t (fila k de response.frame_pressure_head_m) se mueve con la barra única del panel"
+      ]
+    },
+    {
+      "id": "series-temporales-h",
+      "label": "Altura piezométrica (o presión) en válvula y L/2",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "response.time_s[]",
+        "label": "Tiempo",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      "series": [
+        {
+          "contract_path": "response.head_valve_m[]",
+          "label": "Válvula",
+          "unit": "m",
+          "role": "valvula"
+        },
+        {
+          "contract_path": "response.head_midpoint_m[]",
+          "label": "Punto medio (x = L/2)",
+          "unit": "m",
+          "role": "punto-medio"
+        },
+        {
+          "contract_path": "response.pressure_head_valve_m[]",
+          "label": "Válvula",
+          "unit": "m.c.a.",
+          "role": "valvula"
+        },
+        {
+          "contract_path": "response.pressure_head_midpoint_m[]",
+          "label": "Punto medio (x = L/2)",
+          "unit": "m.c.a.",
+          "role": "punto-medio"
+        }
+      ],
+      "interactions": [
+        "forma parte del panel «Transitorio» (ver perfil-envolventes): barra única, cuatro pestañas, un gráfico a la vez; cambiar de pestaña conserva el instante y la reproducción",
+        "conmutador «H | p/γ» sobre el gráfico (botones con aria-pressed): muestra el par de altura piezométrica o el de presión; conserva el instante",
+        "cursor vertical del instante t (response.frame_time_s[k]) en --color-chart-marker discontinuo, compartido con la barra única",
+        "clic o arrastre sobre el área de trazado salta a ese instante y detiene la reproducción (D-58): eventos de bajo nivel de ECharts (getZr(): mousedown / mousemove con botón pulsado / mouseup / globalout; containPixel y convertFromPixel sobre gridIndex 0 → t → fotograma de response.frame_time_s más cercano), no el evento «click» de serie. Solo en series-temporales-h y series-temporales-q (nunca en las pestañas de progresiva) y en un único módulo del frontend que ambas reutilizan; el equivalente de teclado es el cursor de la barra"
+      ]
+    },
+    {
+      "id": "series-temporales-q",
+      "label": "Caudal en válvula y depósito",
+      "engine": "echarts",
+      "x": {
+        "contract_path": "response.time_s[]",
+        "label": "Tiempo",
+        "symbol": "t",
+        "unit": "s",
+        "decimals": 2
+      },
+      "series": [
+        {
+          "contract_path": "response.flow_valve_lps[]",
+          "label": "Válvula",
+          "unit": "L/s",
+          "role": "valvula"
+        },
+        {
+          "contract_path": "response.flow_reservoir_lps[]",
+          "label": "Depósito",
+          "unit": "L/s",
+          "role": "deposito"
+        }
+      ],
+      "interactions": [
+        "forma parte del panel «Transitorio» (ver perfil-envolventes): barra única, cuatro pestañas, un gráfico a la vez; cambiar de pestaña conserva el instante y la reproducción",
+        "cursor vertical del instante t compartido; clic o arrastre salta a ese instante con el mismo módulo de bajo nivel que series-temporales-h (D-58)",
+        "línea de referencia en Q = 0 (--color-chart-neutral discontinuo, rótulo «Q = 0» en --color-chart-label) para leer el retroceso hacia el depósito"
+      ]
+    }
+  ],
+  "states": {
+    "empty": "La columna de resultados explica qué hacer: completar los datos de la tubería y la ley de cierre (y, si se activa «Usar perfil del trazado», la pestaña Perfil) y pulsar Calcular; recuerda que el resultado incluye envolventes de presión, avisos de PN y separación de columna y la comparación con Joukowsky / Michaud.",
+    "loading": "skeleton",
+    "errors": [
+      "input",
+      "domain",
+      "unreachable",
+      "unknown"
+    ]
+  },
+  "requests": [
+    "DR-1",
+    "DR-2",
+    "DR-3",
+    "DR-4",
+    "DR-5"
+  ]
+}
