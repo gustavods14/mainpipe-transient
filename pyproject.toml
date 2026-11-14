@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mainpipe-transient"
+version = "0.1.0"
+description = "Water hammer in a gravity main (reservoir - pipe - valve) by the Method of Characteristics."
+requires-python = ">=3.12"
+authors = [
+  { name = "Gustavo Delgado" }
+]
+# Everything src/ imports, with lower bounds only (kit 01 §7, plan 01 §3, U-27).
+dependencies = [
+  "numpy>=1.24",
+  "pydantic>=2.6",
+]
+keywords = ["hydraulics", "water-hammer", "transients", "method-of-characteristics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+# Only for tools/extract_excel_reference.py (run once, U-28). Never imported by src/ or tests/.
+excel-reference = ["openpyxl>=3.1", "pywin32>=306; sys_platform == 'win32'"]
+
+[project.urls]
+Repository = "https://github.com/gustavods14/mainpipe-transient"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mainpipe_transient = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
