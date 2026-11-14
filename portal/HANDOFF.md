@@ -7,7 +7,7 @@
 | Distribución | `mainpipe-transient` |
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.0` |
-| Versión del contrato (`SCHEMA_VERSION`) | — |
+| Versión del contrato (`SCHEMA_VERSION`) | `1.0` (congelada en G4) |
 | Commit a pinear | — (se llena en la entrega) |
 
 ## Etapas
@@ -18,7 +18,7 @@
 | 1 | Historias (G1) | aprobada | 2026-11-14 | `doc/stories/` | 3.0.0 |
 | 2 | Plan (G2) | aprobada | 2026-11-14 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-14 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
-| 4 | Decisiones del portal (G4) | en curso | 2026-11-14 | `D-NN` en el portal · plan `congelado` | |
+| 4 | Decisiones del portal (G4) | aprobada | 2026-11-14 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | pendiente | | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
@@ -51,3 +51,8 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   validado con jsonschema; 73 `contract_path` presentes en el plan §1, sin huecos. Hallazgos para
   el kit: el esquema de `ui-spec.json` no tiene lugar para fórmulas (D-61) ni para acciones dentro
   de un aviso («Ir a t», descrito en `interactions`).
+- 2026-11-14: G4 aprobada. DR-1 … DR-6 resueltos (D-57 … D-62), ninguno bloqueante abierto; plan
+  `doc/plans/01-golpe-ariete-v1.md` congelado con `SCHEMA_VERSION` = `"1.0"` (U-37). El dueño
+  acepta U-03, U-14, U-21, U-22, U-34 (6) y U-35 como vigentes y el riesgo de U-34: si la respuesta
+  del peor caso supera 3 500 000 B en la fase 5, se bajan fotogramas sin abrir pedido y el tope
+  efectivo se publica en `portal/INTEGRATION.md`.
