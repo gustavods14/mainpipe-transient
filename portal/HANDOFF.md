@@ -19,7 +19,7 @@
 | 2 | Plan (G2) | aprobada | 2026-11-14 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-14 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | aprobada | 2026-11-14 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
-| 5 | Construcción (G5) | pendiente | | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | |
+| 5 | Construcción (G5) | en curso | 2026-11-14 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
@@ -56,3 +56,7 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   acepta U-03, U-14, U-21, U-22, U-34 (6) y U-35 como vigentes y el riesgo de U-34: si la respuesta
   del peor caso supera 3 500 000 B en la fase 5, se bajan fotogramas sin abrir pedido y el tope
   efectivo se publica en `portal/INTEGRATION.md`.
+- 2026-11-14: etapa 5 en curso. Fase 0 del plan (andamiaje y referencia del Excel, U-28)
+  entregada en `905e53a` y verificada por `hie-verifier`: **pasa**
+  (`doc/verification/01-fase-0.md`). Menores: F0-01 y F0-02 aceptados por el dueño; F0-03
+  (este estado) corregido.
