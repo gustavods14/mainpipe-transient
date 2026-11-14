@@ -2,8 +2,9 @@
 
 > Formato y ciclo de vida: `doc/upstream-kit/08-decision-requests.md` en el portal.
 > Lo escribe `hie-architect`. Los estados y las `D-NN` las copia el usuario al volver del portal.
-> Plan de origen: `doc/plans/01-golpe-ariete-v1.md` (kit 3.0.0; aprobado en G2, reabierto el
-> 2026-11-14 para incorporar D-57 … D-62; se congela en G4).
+> Plan de origen: `doc/plans/01-golpe-ariete-v1.md` (kit 3.0.0; aprobado en G2, reabierto y
+> reaprobado el 2026-11-14 con D-57 … D-62; **congelado** el 2026-11-14 para G4, `SCHEMA_VERSION`
+> `"1.0"`).
 > 2026-11-14: DR-1 y DR-4 reformulados tras aprobar el prototipo (G3) para pedir exactamente lo
 > que proponen `portal/ui-spec.json` y `portal/prototype.html` (U-30). DR-3: contexto y
 > alternativas actualizados al panel aprobado en G3, misma pregunta. DR-2: añadida la palanca de
@@ -12,8 +13,12 @@
 > D-57, D-58, D-59 y D-60 obligan a enmendar el plan, HU-4.1 y `portal/ui-spec.json` /
 > `portal/prototype.html` antes de congelar en G4 (ver «Pendiente tras las decisiones» al final).
 > 2026-11-14: historias enmendadas y reaprobadas en G1 (D-57). Plan enmendado con D-57 … D-62
-> (`hie-architect`), pendiente de reaprobación en G2; el estado de cada punto está al final. Ningún
-> pedido nuevo: los efectos de D-57 … D-62 caben en lo decidido (plan U-33 … U-36).
+> (`hie-architect`) y reaprobado en G2; el estado de cada punto está al final. Ningún pedido nuevo:
+> los efectos de D-57 … D-62 caben en lo decidido (plan U-33 … U-36).
+> 2026-11-14: `portal/ui-spec.json` y `portal/prototype.html` enmendados con D-57 … D-62 y G3
+> reaprobada. Plan **congelado** (G4 pendiente de `/hie-flow approve 4`): todos los pedidos
+> resueltos, ningún bloqueante abierto; lo único pendiente son las mediciones de D-57, programadas
+> en las fases 5 y 6 de la construcción.
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|
@@ -367,14 +372,19 @@ respuesta.
 | D-57: medir petición del peor caso ≤ 64 KiB (D-48) | programado: fases 5 y 6, junto a la anterior | §2, §5, V-18; U-34 |
 | D-57: sin redondeo; `frame_stride` se mantiene | hecho en el plan | §1.4; U-10 |
 | D-57: `examples/` con la serie solo en el caso del Excel | hecho en el plan | §5, ejemplos previstos |
-| D-58: botón «Ir a t = … s» | Capa 1 sin cambios (los avisos llevan instante; U-36). `ui-spec.json`: etapa 3 | §1.5 |
-| D-58 (resto), D-59, D-61 | etapa 3 (`ui-spec.json` / `prototype.html`) | — |
-| D-60: rojo solo en el cruce, mismo predicado que `danger` | predicado fijado y verificado en el plan; eco `min_allowed_pressure_head_m` en la respuesta (U-35). Colores: etapa 3 | §1.4, §1.5, V-13 |
-| D-62: sin IA | Capa 1 sin cambios. Sección `ai`: etapa 3 | `portal/API-PROPOSAL.md` |
+| D-58: botón «Ir a t = … s» | Capa 1 sin cambios (los avisos llevan instante; U-36). **Hecho** en `ui-spec.json` / `prototype.html` el 2026-11-14 (G3) | plan §1.5; `ui-spec.json`, `charts[perfil-envolventes].interactions` (el esquema no tiene sitio para acciones en un aviso: hallazgo, plan §8) |
+| D-58 (resto): instante como estado del panel, reinicio con cada resultado, clic/arrastre solo en «Válvula y L/2» y «Caudales», teclado | **hecho** el 2026-11-14 (G3) | `ui-spec.json` / `prototype.html` |
+| D-59: barra de una fila, opaca, sticky solo ≥ lg con `lg:top-20`, estática por debajo | **hecho** el 2026-11-14 (G3) | `ui-spec.json` / `prototype.html` |
+| D-60: rojo solo en el cruce, mismo predicado que `danger` | predicado fijado y verificado en el plan; eco `min_allowed_pressure_head_m` en la respuesta (U-35). Colores (PN y límite en `--color-chart-label`, banda con bordes de 1 px, régimen neutral, `series-3` solo depósito, rótulos con nombre): **hechos** el 2026-11-14 (G3) | plan §1.4, §1.5, V-13; `ui-spec.json` / `prototype.html` |
+| D-61: fórmulas en HTML con `<var>` / `<sub>` y desglose | **hecho** el 2026-11-14 (G3); en `ui-spec.json` solo como `symbol` Unicode de los kpis (el esquema no tiene sitio para fórmulas: hallazgo, plan §8) | `prototype.html`; `ui-spec.json` kpis |
+| D-62: sin IA | Capa 1 sin cambios. Sección `ai` **eliminada** de `ui-spec.json` el 2026-11-14 (G3) | `portal/API-PROPOSAL.md`; `ui-spec.json` |
 
-Para la etapa 3 además: `portal/ui-spec.json` (hint de `duration_s`) y `portal/prototype.html` aún
-dicen «tope de 20 000 pasos» (D-57: 10 000), y la línea del límite en `ui-spec.json` lee
-`request.min_allowed_pressure_head_m`, que pasa a `response.min_allowed_pressure_head_m` (U-35).
+Para la etapa 3 además, **hecho** el 2026-11-14 (G3): el hint de `duration_s` en
+`portal/ui-spec.json` y `portal/prototype.html` dice «tope de 10 000 pasos» (D-57), y la línea del
+límite lee `response.min_allowed_pressure_head_m` (U-35), no el valor del formulario.
+
+Con esto no queda nada pendiente antes de G4. Siguen programadas para la construcción las dos
+mediciones de D-57 (respuesta ≤ 3,5 MB, petición ≤ 64 KiB): fases 5 y 6 del plan, V-18.
 
 Lista original del portal:
 

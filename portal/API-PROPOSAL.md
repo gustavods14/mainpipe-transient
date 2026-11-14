@@ -3,8 +3,8 @@
 > **Propuesta**, no contrato. La Capa 2 la fija `software-architect` del portal en
 > `doc/apps/mainpipe-transient/API.md`. Convención vigente: `doc/upstream-kit/03-portal-api.md`.
 > Contrato de Capa 1 en el que se apoya: `doc/plans/01-golpe-ariete-v1.md` §1 (kit 3.0.0,
-> `SCHEMA_VERSION` propuesto `"1.0"`; G2 reabierta el 2026-11-14 para incorporar D-57 … D-62,
-> pendiente de reaprobación; se congela en G4).
+> `SCHEMA_VERSION` `"1.0"`; G2 reaprobada el 2026-11-14 con D-57 … D-62; Capa 1 **congelada** el
+> 2026-11-14 para G4).
 > 2026-11-14: actualizada con D-57 (sin `frame_flow_lps`, `MAX_STEPS` = 10 000, tamaños), D-60
 > (eco `min_allowed_pressure_head_m`) y D-62 (sin IA).
 

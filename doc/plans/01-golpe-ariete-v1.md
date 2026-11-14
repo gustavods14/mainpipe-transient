@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| estado | **borrador** — aprobado en G2 el 2026-11-14; G2 **reabierta** el mismo día para incorporar D-57 … D-62. Pendiente de reaprobación (G2); se congela en G4 |
+| estado | **congelado** — 2026-11-14, puerta G4. Contrato de Capa 1 (§1) con `SCHEMA_VERSION` = `"1.0"`. Antes: aprobado en G2 el 2026-11-14 y reaprobado el mismo día tras incorporar D-57 … D-62. Toda enmienda posterior sigue `kit 01 §8` y U-37 |
 | kit | 3.0.0 |
-| fecha | 2026-11-14 |
+| fecha | 2026-11-14 (congelado) |
 | historias | `doc/stories/00-epica.md` … `04-serie-reproduccion.md` (reaprobadas en G1 el 2026-11-14 con D-57: HU-4.1 crit. 1 sin `frame_flow_lps`, HU-1.6 crit. 13) |
 | pedidos al portal | `portal/DECISION-REQUESTS.md` (DR-1 … DR-6, **todos resueltos**: D-57 … D-62, commit `2466321` del portal) |
 | propuesta de Capa 2 | `portal/API-PROPOSAL.md` |
-| decisiones internas | `doc/DECISIONS.md` (U-01 … U-36) |
+| decisiones internas | `doc/DECISIONS.md` (U-01 … U-37) |
 
 ---
 
@@ -54,15 +54,16 @@ acabados.
    resultados calculados, la fase 0 los genera una vez con Excel y los congela como referencia.
 2. **Inestabilidad numérica con mucha fricción y tramos largos.** Como un encofrado demasiado
    largo sin apuntalar: con tramos muy largos, mucha fricción y diámetro pequeño, el esquema puede
-   oscilar. Se propone rechazar esos casos con un mensaje que diga cuántos tramos usar como mínimo
-   (punto abierto 1, abajo).
+   oscilar. Esos casos se rechazan con un mensaje que dice cuántos tramos usar como mínimo
+   (punto 1 de abajo, confirmado en G2).
 3. **Tiempo de cálculo y tamaño de la respuesta.** El portal espera la respuesta antes de atender
    a otros usuarios, y en producción corta toda respuesta de más de 4,5 MB sin que ninguna prueba lo
    vea. El portal ya fijó las cotas (D-57): respuesta ≤ 3,5 MB en el peor caso, tope de 10 000
    pasos de cálculo, película de H y presión sin el caudal. Como un camión que tiene que pasar bajo
    un puente: la cuenta en papel da ≈ 3,3 MB, cerca del gálibo, así que en la fase 5 **se pesa la
    carga real** del peor caso antes de entregar. Si no cupiera, se quitan fotogramas a la película
-   de las mallas más grandes (nunca precisión ni series); es un punto a confirmar abajo (6).
+   de las mallas más grandes (nunca precisión ni series); el dueño aceptó esa regla en G2 (punto 6
+   de abajo).
 4. **Que el resultado parezca válido cuando ya no lo es.** Bajo la presión de vapor el agua se
    separa y este método deja de valer. No se modela (fuera de v1), pero el aviso dirá desde qué
    instante y en qué punto los resultados dejan de ser físicos.
@@ -73,14 +74,18 @@ Los seis pedidos están resueltos (detalle en la Parte 2 §7). Lo que cambia el 
 (tamaño): la película lleva solo altura y presión (el caudal por fotograma sale), como mucho
 min(1001, ⌊50 000 / progresivas⌋) fotogramas, tope de 10 000 pasos de cálculo, respuesta ≤ 3,5 MB
 medida y petición ≤ 64 KiB medida. Los otros cinco (panel «Transitorio», layout, colores, fórmulas,
-sin IA) son de la pantalla y se incorporan en la etapa 3; de ellos el motor solo recoge dos
+sin IA) son de la pantalla y se incorporaron en la etapa 3 (`portal/ui-spec.json` y
+`portal/prototype.html`, G3 reaprobada el 2026-11-14); de ellos el motor solo recoge dos
 detalles: que cada aviso lleve su instante para el botón «Ir a t = … s» (ya lo lleva) y devolver la
 presión mínima admisible usada, para que la línea del límite y su cruce en rojo salgan del mismo
 resultado que los avisos (U-35, U-36).
 
-## Puntos que el dueño debe confirmar al reaprobar G2
+## Puntos que el dueño confirmó en G2
 
-**Ya aprobados en G2 el 2026-11-14, sin cambios** (se ratifican; detalle en `doc/DECISIONS.md`):
+Todos confirmados al reaprobar G2 el 2026-11-14 (`portal/HANDOFF.md`, notas); con ellos el plan se
+congeló en G4. Se conservan como registro de lo que se aceptó.
+
+**Ya aprobados en G2 el 2026-11-14, sin cambios** (ratificados; detalle en `doc/DECISIONS.md`):
 
 - **(1) Nuevo error por malla gruesa con mucha fricción** (U-03): si el número de fricción del
   tramo supera 0.5, error 422 con el número mínimo de tramos.
@@ -97,14 +102,15 @@ resultado que los avisos (U-35, U-36).
   si la duración por defecto Tc + 5·(4L/a) no cabe (cierres lentos con malla fina), error 422 que
   da la duración máxima y propone acortar o usar menos tramos (HU-1.6 crit. 13). La duración por
   defecto **no se recorta en silencio** al tope: el usuario ve el 422 y elige (decisión del
-  upstream, U-09; si el dueño prefiere recortarla, dígalo al reaprobar).
+  upstream, U-09; el dueño la aceptó en G2).
 - **(6) Tamaño de la respuesta en el peor caso ≈ 3,3 MB calculado, techo 3,5 MB medido** (D-57):
   ≈ 1,3 MB de series temporales + ≈ 1,9 MB de película + ≈ 0,1 MB de envolventes. El margen es
   corto (≈ 5 %), así que se pesa en la fase 5 con un peor caso a propósito desfavorable (U-34). Si
   la báscula diera más de 3,5 MB, **el plan propone** bajar el presupuesto de fotogramas hasta que
   quepa (menos fotogramas en las mallas grandes; el caso del Excel no cambia), lo que respeta D-57
-  porque sus cifras son techos, e informar al portal en `portal/INTEGRATION.md`. Alternativa, si el
-  dueño la prefiere: no tocar nada y abrir un pedido nuevo al portal (DR-7) en ese momento.
+  porque sus cifras son techos, e informar al portal en `portal/INTEGRATION.md`. **El dueño aceptó
+  esta regla en G2** en lugar de abrir un pedido nuevo al portal (DR-7), y la lectura
+  3,5 MB = 3 500 000 B.
 
 **Nuevos**:
 
@@ -142,6 +148,13 @@ cambio aditivo compatible (campo de entrada opcional nuevo, campo de salida nuev
 `scenario`); sube la **mayor** con un cambio que rompe (campo retirado o renombrado, unidad o tipo
 cambiado). Añadir un escenario (p. ej. parada de bombas) es menor si los campos actuales no cambian
 de significado.
+
+**Versión congelada en G4 (2026-11-14): `SCHEMA_VERSION = "1.0"`**, la forma que describe este §1.
+Desde aquí, cambiar la Capa 1 exige motivo, entrada en el changelog del plan, subir
+`SCHEMA_VERSION` según la regla de arriba (`kit 01 §8`) y regenerar `portal/examples/` y
+`portal/INTEGRATION.md`; si el cambio toca algo que decidió el portal (D-57 … D-62), es un `DR`
+nuevo (U-37). Cambiar un número sin cambiar la forma (p. ej. la regla de ajuste de U-34) no sube
+`SCHEMA_VERSION` (`kit 01 §3`).
 
 ### 1.2 Unidades del contrato (U-06)
 
@@ -183,7 +196,7 @@ FastAPI llegue en español (`kit 02 §3`). Los rangos se repiten en `description
 Reglas cruzadas adicionales, todas 422 y en el validador del modelo:
 
 - **Número de fricción del tramo** (U-03): φ = f·Δx·V₀ / (2·D·a) ≤ 0.5. El mensaje da φ y el
-  `n_reaches` mínimo par que lo cumple. (Punto abierto 1.)
+  `n_reaches` mínimo par que lo cumple. (Confirmado por el dueño en G2.)
 - **Tope de pasos** (U-09, D-57, HU-1.6 crit. 13): `n_steps` = ⌈T/Δt − 10⁻⁹⌉ ≤ `MAX_STEPS`
   = 10 000, con T la duración pedida o, si falta, la de por defecto. El mensaje nombra
   `duration_s` y `n_reaches`, da los pasos necesarios, la **duración máxima admisible con esa
@@ -556,6 +569,19 @@ portal); **ningún pedido bloqueante abierto**.
   el CI lo vea; D-57 lo resolvió para esta app. Una regla general en `kit 01 §6` (techo, cómo se
   mide, con qué serializador) evitaría repetir el pedido. D-57 expresa el techo en «MB» sin decir
   si son 10⁶ o 2²⁰ B; el plan toma 10⁶ B, lo más estricto (U-34).
+- **`06-ui-spec.schema.json` no tiene dónde declarar fórmulas ni cómo se presentan** (etapa 3).
+  D-61 fijó ΔH = a·V₀/g y ΔH = 2·L·V₀/(g·T_c) en HTML con `<var>` / `<sub>` y desglose de variables
+  con unidades, pero el esquema no tiene un campo para la fórmula ni para su desglose: quedaron solo
+  como `symbol` Unicode en los `kpis` de `portal/ui-spec.json` y, completas, en
+  `portal/prototype.html`, que es desechable (`kit 04 §1`). El frontend tendrá que leerlas del
+  prototipo o de D-61. Convendría un campo `formula` (expresión y variables con unidad) en los kpis
+  o un bloque propio.
+- **`06-ui-spec.schema.json` no tiene dónde declarar acciones dentro de un aviso de `checks`**
+  (etapa 3). El botón «Ir a t = … s en el transitorio» que D-58 mandó añadir (qué instante usa cada
+  código, a qué fotograma salta, qué pestaña abre, cuándo no se muestra) quedó descrito en texto
+  libre en `charts[].interactions` del gráfico `perfil-envolventes`, lejos de la sección de
+  `checks` donde vive el botón. Convendría un campo `actions` por código en la sección de `checks`
+  del esquema.
 
 ---
 
@@ -569,3 +595,4 @@ portal); **ningún pedido bloqueante abierto**.
 | 2026-11-14 | Más coherencia tras G3. Estado: de «borrador (para la puerta G2)» a **aprobado** (G2 del 2026-11-14), pendiente de congelarse en G4; misma corrección en la cabecera de `portal/DECISION-REQUESTS.md`. §7: DR-5 pasa de «etapa 3» a «integración de la pantalla», como DR-3 y DR-4 (también en `DECISION-REQUESTS.md`). Parte 1, punto 6 de las confirmaciones de G2: se mantiene, porque es el punto que el dueño aprobó en G2 (el retirado era el 6 de antes de renumerar, que dependía de la lectura del Excel), y ahora cita también la palanca `frame_flow_lps` (U-31); se aclara la redacción de la entrada del changelog que lo retiraba. Capa 1 sin cambios. |
 | 2026-11-14 | **G2 reabierta: incorporación de D-57 (DR-2).** Estado a **borrador**, pendiente de reaprobación. Capa 1: `frame_flow_lps` retirado de `SolveResponse` sin opción para pedirlo (U-33, sustituye a U-31); tope de fotogramas min(1001, ⌊50 000 / n_progresivas⌋) con dos matrices (U-10 vigente); `MAX_STEPS` = 10 000 (U-09 vigente) con 422 de HU-1.6 crit. 13, T_max truncada y variantes de mensaje (duración por defecto, duración mínima mayor que T_max). §2 recalculado: tiempo del peor caso ≈ 0.25–0.35 s (antes 0.5–0.7 s); respuesta del peor caso ≈ 3,3 MB `[calculado]` (antes ≈ 5 MB) frente al techo de 3,5 MB; petición ≈ 21–26 KB frente a 64 KiB; caso del Excel ≈ 0,35 MB (antes ≈ 0,5 MB). Fase 5 con las mediciones obligatorias de D-57 (1) y (10) y protocolo U-34; fase 6 vuelca las cifras y la receta del peor caso a `portal/INTEGRATION.md`; V-17 enmendada (HU-4.1 crit. 1 sin caudal; sin clave `frame_flow_lps`), V-18 nueva. Ejemplos: solo el del Excel con serie (D-57 (8)), nuevo ejemplo de error por `MAX_STEPS`. M14 y U-07: Q ya no se interpola en los vértices. |
 | 2026-11-14 | **Incorporación de D-58 … D-62.** Capa 1: eco `min_allowed_pressure_head_m` en `SolveResponse` (U-35) y predicado por progresiva del cruce en rojo, igual al de los avisos `danger` (D-60, U-36, V-13); los avisos ya llevan instante para «Ir a t = … s» (D-58), sin campos nuevos. §3: D-61 sin dependencia. §7: DR-1 … DR-6 resueltos, con su efecto en el plan. §8: hallazgo sobre el tamaño de respuesta. Parte 1 reescrita en «Lo que el portal decidió» y «Puntos que el dueño debe confirmar al reaprobar G2» (3 y 6 cambiados por D-57; 7 y 8 nuevos). `SCHEMA_VERSION` sigue en `"1.0"`: el contrato no está congelado. Lo de pantalla (D-58 … D-62 en `ui-spec.json` / `prototype.html`) queda para la etapa 3. |
+| 2026-11-14 | **Congelado (G4), `hie-architect`, kit 3.0.0.** Comprobado antes de congelar: DR-1 … DR-6 `resuelto` con su D-NN (D-57 … D-62) y ningún `DR` bloqueante `abierto` (`kit 08 §1`); G1, G2 y G3 reaprobadas el 2026-11-14 con D-57 … D-62; los 73 `contract_path` de `portal/ui-spec.json` están en §1, y el límite se lee de `response.min_allowed_pressure_head_m` (U-35). Estado a **congelado**; **`SCHEMA_VERSION = "1.0"` confirmado como versión congelada** (§1.1), con la regla de enmienda posterior (U-37, `kit 01 §8`). Puestos al día los textos que G2 ya había resuelto, sin cambiar el contrato: Parte 1, riesgos 2 y 3 y la sección de confirmaciones, que pasa a «Puntos que el dueño confirmó en G2» (U-03, U-09 sin recorte de la duración por defecto, U-14, U-21, U-22, regla de ajuste de U-34, U-33, U-35); §1.3, la nota de φ ya no dice «punto abierto». §8: dos hallazgos de la etapa 3 sobre `06-ui-spec.schema.json` (fórmulas de D-61; acciones dentro de un aviso, «Ir a t» de D-58). Capa 1 sin cambios respecto a la reaprobación de G2. |
