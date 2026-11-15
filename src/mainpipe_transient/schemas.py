@@ -379,8 +379,8 @@ class SolveRequest(BaseModel):
                 relation = "es igual a" if xs[i] == xs[i - 1] else "es menor que"
                 raise ValueError(
                     "La progresiva del perfil (profile_x_m) debe ser estrictamente creciente: "
-                    f"x[{i}] = {fmt_value(xs[i])} m {relation} x[{i - 1}] = "
-                    f"{fmt_value(xs[i - 1])} m."
+                    f"x[{i}] = {fmt_value(xs[i])} m (punto {i + 1}) {relation} x[{i - 1}] = "
+                    f"{fmt_value(xs[i - 1])} m (punto {i})."
                 )
         if zs[0] > self.reservoir_level_m:
             raise ValueError(

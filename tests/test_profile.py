@@ -223,6 +223,26 @@ def test_hu22_crit2_global_extremes_and_aligned_columns(x, z):
     assert out["pressure_head_min_m"][j] == out["pressure_head_min_global_m"]
 
 
+@pytest.mark.parametrize(
+    "x, z, which, x_expected",
+    [
+        ([0.0, 510.0, 520.0, 530.0, 1000.0], [0.0, 0.0, 60.0, 0.0, 0.0], "min", 520.0),
+        ([0.0, 960.0, 970.0, 980.0, 1000.0], [0.0, 0.0, -60.0, 0.0, 0.0], "max", 970.0),
+    ],
+    ids=["minimo-en-pico", "maximo-en-valle"],
+)
+def test_f301_global_extreme_on_a_vertex_that_is_not_a_node(x, z, which, x_expected):
+    """F3-01: a sharp peak/dip between nodes holds the global extreme; nodes alone miss it."""
+    out = solve(profile(x, z))
+    pick = min if which == "min" else max
+    envelope = out[f"pressure_head_{which}_m"]
+    assert out[f"pressure_head_{which}_global_x_m"] == x_expected
+    assert at(out, "x_is_node", x_expected) is False
+    assert out[f"pressure_head_{which}_global_m"] == pick(envelope)
+    nodes_only = pick(v for v, node in zip(envelope, out["x_is_node"]) if node)
+    assert abs(out[f"pressure_head_{which}_global_m"] - nodes_only) > 10.0
+
+
 def test_hu22_crit3_loma_lowers_minimum_pressure_by_its_height():
     """V-10: p_min(500) with the loma = horizontal p_min(500) - 40 (± 1e-6 m)."""
     h = solve(horizontal())
@@ -243,12 +263,13 @@ def test_hu22_crit3_loma_lowers_minimum_pressure_by_its_height():
 def test_hu23_crit1_non_increasing_chainage_names_the_point():
     msg = reject(profile([0.0, 150.0, 300.0, 120.0, 600.0], [0.0, 1.0, 2.0, 3.0, 4.0]))
     assert "estrictamente creciente" in msg
-    assert "x[3] = 120 m es menor que x[2] = 300 m" in msg
+    # HU-2.3 crit. 1 literal (0-based x[i]) plus the 1-based point used elsewhere (F3-03)
+    assert "x[3] = 120 m (punto 4) es menor que x[2] = 300 m (punto 3)" in msg
 
 
 def test_hu23_crit1_repeated_chainage():
     msg = reject(profile([0.0, 300.0, 300.0, 600.0], [0.0, 1.0, 2.0, 3.0]))
-    assert "x[2] = 300 m es igual a x[1] = 300 m" in msg
+    assert "x[2] = 300 m (punto 3) es igual a x[1] = 300 m (punto 2)" in msg
 
 
 @pytest.mark.parametrize(

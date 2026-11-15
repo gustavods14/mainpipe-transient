@@ -75,3 +75,8 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   y reverificado: **pasa** (`doc/verification/03-fase-2.md`). Menores nuevos F2-05 (test de F2-03
   con el Tc equivocado) y F2-06 (φ = inf en el mensaje) corregidos después. Provisionales hasta su
   fase: `profile` (3), `checks` (4), `frame_*` (5).
+- 2026-11-14: fase 3 del plan (perfil) entregada en `2febc3f`; `hie-verifier` **pasa**
+  (`doc/verification/04-fase-3.md`), sin bloqueantes ni mayores. Menores: F3-01 (test del extremo
+  global en un vértice fuera de nodo) y F3-03 (mensaje con «(punto N)» además del literal de
+  HU-2.3 crit. 1) corregidos; F3-02 (dos vértices a menos de 10⁻⁹·L del mismo nodo: el nodo toma la
+  cota del último) **aceptado por el dueño**, por ser un escalón vertical sin sentido físico.

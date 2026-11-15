@@ -61,3 +61,7 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   depósito, y datos de cada geometría; con `profile`, `length_m` y `pipe_elevation_m` son 422
   (U-22). Los topes de malla y duración (U-03, U-09) usan la L del perfil.
 - Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`).
+- Menores de la verificación (`doc/verification/04-fase-3.md`): test con el extremo global de
+  presión en un vértice fuera de nodo (F3-01); el mensaje de progresiva no creciente añade la
+  posición desde 1, «x[3] = 120 m (punto 4)…» (F3-03). F3-02 (dos vértices fundidos en el mismo
+  nodo) aceptado por el dueño.
