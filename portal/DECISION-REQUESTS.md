@@ -29,6 +29,11 @@
 > commit en el portal al registrarlo). Ningún bloqueante abierto. D-63, D-64 y D-65 añaden
 > condiciones de verificación y D-66 retira U-32: obligan a enmendar el plan y `portal/ui-spec.json`
 > antes de re-congelar (ver «Pendiente tras D-63 … D-66» al final).
+> 2026-11-15: plan enmendado con D-63 … D-66 (`hie-architect`) y **congelado** con
+> `SCHEMA_VERSION` `"2.0"` (nueva G4 pendiente de `/hie-flow approve 4`). Ningún pedido nuevo: las
+> cuatro decisiones eligen la alternativa (a) y caben en el plan (U-36, U-42, U-34 (6)). Queda
+> pendiente la frase del rojo en `portal/ui-spec.json` / `portal/prototype.html`
+> (`hie-prototyper`) y lo de la construcción (`hie-api`), en la tabla del final.
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|
@@ -658,14 +663,23 @@ Lista original del portal:
 
 ## Pendiente tras D-63 … D-66 (antes de la nueva G4)
 
-Copiado de las decisiones del portal (2026-11-15). Estado: **pendiente**.
+Copiado de las decisiones del portal (2026-11-15). Estado al 2026-11-15, tras la enmienda del
+plan (`hie-architect`): **hecho en el plan** todo lo de `hie-architect`; **pendiente** lo de
+`hie-prototyper` (frase del rojo) y lo de `hie-api` (construcción, fases 5 y 6), cada uno en su
+etapa.
 
-| Punto | Qué | Dónde | Quién |
-|---|---|---|---|
-| D-63 (3)-(4) | Marcador del cruce y extremo en `critical` desde el aviso `danger` de `checks` (`x_m`, `time_s`, `value_m`); tramo rojo opcional sobre la envolvente redondeada, **solo si existe el aviso**. Nunca rojo sin aviso; el único desacuerdo admitido es aviso y marcador sin tramo a < 0.0005 m del umbral | plan §1.5, U-36, V-13; frase del predicado en `ui-spec.json` y `prototype.html` | `hie-architect`, `hie-prototyper` |
-| D-63 (5) | Regla de precisión y de comparación (redondear el escalar a 3 decimales o tolerancia 0.0005 m) | `portal/INTEGRATION.md` (fase 6) | `hie-api` |
-| D-63 (6) | Los casos dorados congelan los valores redondeados | fase 5 | `hie-api` |
-| D-64 (3) | Declarar como contrato `frame_x_m == x_m` y p/γ(x_j, t_k) = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota z que `pressure_head_*`; mantenerlo probado (`tests/test_frames.py`) | plan §1.4; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` |
-| D-65 (3)-(4) | Medir dos recetas (peor caso realista y magnitudes extremas, ≈ 25 B por número), ambas ≤ 3 500 000 B; publicar cota absoluta y las dos cifras medidas | plan U-34 / §2; fase 5; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` |
-| D-66 | Retirar U-32 (texto de fase) | plan; `ui-spec.json` ya lo retiró en G3 | `hie-architect` |
-| Opcional | `frame_x_m` repite `x_m` (≈ 5 kB); el portal sugiere que podría quitarse. No registrado como decisión | plan, si el dueño lo quiere | dueño |
+| Punto | Qué | Dónde | Quién | Estado |
+|---|---|---|---|---|
+| D-63 (3)-(4) | Marcador del cruce y extremo en `critical` desde el aviso `danger` de `checks` (`x_m`, `time_s`, `value_m`); tramo rojo opcional sobre la envolvente redondeada, **solo si existe el aviso**. Nunca rojo sin aviso; el único desacuerdo admitido es aviso y marcador sin tramo a < 0.0005 m del umbral | plan §1.5, U-36, V-13; frase del predicado en `ui-spec.json` y `prototype.html` | `hie-architect`, `hie-prototyper` | plan: **hecho** (§1.5 reescrito: PN ↔ `PN_EXCEEDED`, límite ↔ `COLUMN_SEPARATION_RISK`, campos del aviso idénticos al extremo global; U-36; V-13 reescrita). `ui-spec.json` / `prototype.html`: **pendiente** (`hie-prototyper`, etapa 3) |
+| D-63 (5) | Regla de precisión y de comparación (redondear el escalar a 3 decimales o tolerancia 0.0005 m) | `portal/INTEGRATION.md` (fase 6) | `hie-api` | plan: **hecho** (§1.4, regla de comparación; fase 6 (b)). `INTEGRATION.md`: **pendiente** (`hie-api`, fase 6) |
+| D-63 (6) | Los casos dorados congelan los valores redondeados | fase 5 | `hie-api` | plan: **hecho** (fase 5: V-19 sobre la salida de `solve()`; fase 6: V-19 sobre cada ejemplo). Construcción: **pendiente** (`hie-api`, fases 5–6) |
+| D-64 (3) | Declarar como contrato `frame_x_m == x_m` y p/γ(x_j, t_k) = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota z que `pressure_head_*`; mantenerlo probado (`tests/test_frames.py`) | plan §1.4; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§1.4, invariantes 1–3; V-17; U-42). Pruebas e `INTEGRATION.md`: **pendiente** (`hie-api`, fases 5–6) |
+| D-65 (3)-(4) | Medir dos recetas (peor caso realista y magnitudes extremas, ≈ 25 B por número), ambas ≤ 3 500 000 B; publicar cota absoluta y las dos cifras medidas | plan U-34 / §2; fase 5; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§2, fase 5 (5.4), V-18; U-34 (3), (3b), (5) y (6) enmendadas: receta adversaria determinista con ≥ 20 B por número; si una medición supera el techo, se detiene y se pide). Mediciones e `INTEGRATION.md`: **pendiente** (`hie-api`, fases 5–6). F5-01 se cierra cuando las dos estén en verde |
+| D-66 | Retirar U-32 (texto de fase) | plan; `ui-spec.json` ya lo retiró en G3 | `hie-architect` | **hecho** (U-32 retirada; plan §7) |
+| Opcional | `frame_x_m` repite `x_m` (≈ 5 kB); el portal sugiere que podría quitarse. No registrado como decisión | plan, si el dueño lo quiere | dueño | **cerrado**: el dueño decide **mantenerlo** (U-42); el contrato lo declara idéntico a `x_m` |
+
+Nota para el portal (no cambia ninguna decisión): D-64 (2) indexa la serie de la válvula con
+k·`frame_stride`. Es exacto en el fixture que nombra (caso del Excel, sin submuestreo); con
+submuestreo el último fotograma es el paso `n_steps` (en la receta del peor caso, 69·145 = 10 005
+≠ 10 000). La regla general, que publicará `portal/INTEGRATION.md`, es el índice i_k con
+`time_s[i_k]` == `frame_time_s[k]` (plan §1.4, invariante 3).

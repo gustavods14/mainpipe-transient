@@ -3,14 +3,18 @@
 > **Propuesta**, no contrato. La Capa 2 la fija `software-architect` del portal en
 > `doc/apps/mainpipe-transient/API.md`. Convención vigente: `doc/upstream-kit/03-portal-api.md`.
 > Contrato de Capa 1 en el que se apoya: `doc/plans/01-golpe-ariete-v1.md` §1 (kit 3.0.0,
-> `SCHEMA_VERSION` **`"2.0"` propuesta** por la enmienda del 2026-11-15, pendiente de G2 y de una
-> nueva G4; antes `"1.0"`, congelada el 2026-11-14).
+> `SCHEMA_VERSION` **`"2.0"`, congelada el 2026-11-15** en la nueva G4 tras la enmienda; antes
+> `"1.0"`, congelada el 2026-11-14).
 > 2026-11-14: actualizada con D-57 (sin `frame_flow_lps`, `MAX_STEPS` = 10 000, tamaños), D-60
 > (eco `min_allowed_pressure_head_m`) y D-62 (sin IA).
 > 2026-11-15: actualizada con la enmienda tras G4: sin `density_kgm3` ni `gravity_ms2` en la
 > petición (ρ y g fijos, plan U-40), sin `frame_pressure_head_m` (DR-8), listas a 3 decimales
 > (DR-7, plan U-39) y tamaños nuevos (DR-9). Lo que depende de DR-7 … DR-9 es propuesta hasta que
 > el portal los resuelva.
+> 2026-11-15: DR-7 … DR-10 resueltos (D-63 … D-66, alternativa (a)). La Capa 2 no cambia (un solo
+> endpoint, router sin transformar la respuesta). Al día con D-63 (redondeo hecho por el paquete),
+> D-64 (sin `frame_pressure_head_m`; invariantes de la serie) y D-65 (tope de fotogramas y dos
+> recetas de tamaño).
 
 ## Endpoints
 
@@ -22,9 +26,9 @@ Todo endpoint con "sí" en la última columna tiene su `DR-N`.
 
 No se propone ningún otro endpoint. La serie para el reproductor (F4) viaja en la misma respuesta
 de `solve`, con el tamaño que fijó **D-57** (DR-2; el endpoint `/frames` quedó descartado). Router
-delgado según `kit 03 §1`, sin redondear ni transformar la respuesta (D-57 (9)): en la 2.0 el
-redondeo a 3 decimales de las listas lo hace **el paquete** (DR-7, plan U-39), y el `dict` que
-devuelve `solve` ya viene redondeado.
+delgado según `kit 03 §1`, sin redondear ni transformar la respuesta (D-57 (9), D-63 (2)): en la
+2.0 el redondeo a 3 decimales de las listas lo hace **el paquete** (D-63, plan U-39), y el `dict`
+que devuelve `solve` ya viene redondeado.
 
 ```python
 from mainpipe_transient import solve, MainpipeTransientError
@@ -121,8 +125,10 @@ POST /api/mainpipe-transient/solve
 
 La respuesta no tiene `frame_flow_lps` (D-57 (3)): el caudal en el tiempo está en
 `flow_valve_lps` y `flow_reservoir_lps`. Desde la 2.0 tampoco tiene `frame_pressure_head_m`
-(DR-8): la presión del fotograma k en la progresiva j es `frame_head_m[k][j]` −
-`elevation_m[j]`. Con `"include_frames": false`, `frame_stride` y los tres `frame_*` vienen `null`.
+(D-64): la presión del fotograma k en la progresiva j es `frame_head_m[k][j]` −
+`elevation_m[j]`, con la misma cota que todos los campos `pressure_head_*`, y `frame_x_m` es
+idéntico a `x_m`; los dos son contrato de Capa 1 (D-64 (3), plan §1.4). Con
+`"include_frames": false`, `frame_stride` y los tres `frame_*` vienen `null`.
 
 Una petición que todavía envíe `density_kgm3` o `gravity_ms2` (contrato 1.0) recibe 422:
 
@@ -140,8 +146,8 @@ Con `"geometry": "profile"` se envían `profile_x_m` y `profile_z_m` en lugar de
 ## Tamaño y tiempo de respuesta
 
 Cotas de **D-57**: respuesta del peor caso ≤ 3,5 MB, `MAX_STEPS` = 10 000, sin `frame_flow_lps`.
-Propuestas de la 2.0: listas a 3 decimales hechas por el paquete (DR-7), una sola matriz de
-fotogramas (DR-8) con el tope de hoy, min(1001, ⌊50 000 / n_progresivas⌋) (DR-9 (a)).
+En la 2.0: listas a 3 decimales hechas por el paquete (D-63), una sola matriz de fotogramas (D-64)
+con el tope de hoy, min(1001, ⌊50 000 / n_progresivas⌋) = 50 000 celdas (D-65 (1)-(2)).
 
 - Tiempo: < 1 s en el caso más grande admitido (N = 200, 500 vértices, 10 000 pasos); medido en el
   upstream con el contrato 1.0: mediana 0.147 s con fotogramas (plan U-38). Se vuelve a medir con la
@@ -151,12 +157,16 @@ fotogramas (DR-8) con el tope de hoy, min(1001, ⌊50 000 / n_progresivas⌋) (D
 - Respuesta, contrato 2.0 (estimado; el dueño lo midió con un prototipo del redondeo): peor caso
   ≈ 0,96 MB (963 538 B); caso del Excel con fotogramas ≈ 89 kB (88 604 B). **Cota absoluta** para
   cualquier entrada admitida, incluidas magnitudes absurdas: ≈ 3,2 MB `[calculado]` (25 B por
-  número como máximo, plan §2 y U-34 (3b)). Se miden en la construcción.
+  número como máximo, plan §2 y U-34 (3b)). Se miden en la construcción **dos recetas
+  deterministas** —el peor caso realista y uno con magnitudes extremas admitidas—, ambas
+  ≤ 3 500 000 B; el techo vale para toda entrada admitida solo con esas mediciones (y la guarda del
+  portal que mide las mismas recetas) en verde, no con la cuenta (D-65 (3)-(4)).
 - Petición del peor caso (perfil de 500 filas, ley de 20): 19 919 B medidos con la 1.0, frente a
   los 64 KiB de D-48; en la 2.0 lleva dos campos menos.
-- **Cifras medidas**: las dos de D-57 (1) y (10), en bytes y desde el paquete instalado, van a
-  `portal/INTEGRATION.md` en la entrega, con la receta determinista de la entrada del peor caso
-  para que la guarda de `backend/tests/` (D-57 (2)) mida la misma entrada (plan U-34).
+- **Cifras medidas**: las de D-57 (1) —las dos recetas de D-65 (3)— y (10), en bytes y desde el
+  paquete instalado, van a `portal/INTEGRATION.md` en la entrega, con la cota absoluta y las dos
+  recetas deterministas para que la guarda de `backend/tests/` (D-57 (2)) mida las mismas entradas
+  (plan U-34).
 - Casos dorados: solo `solve-excel-horizontal` lleva la serie; los demás, `include_frames: false`
   (D-57 (8)).
 
