@@ -8,8 +8,10 @@ Scheme (identical to the Excel sheet ``2_Malla_MOC``, U-02)::
     reservoir: H = H_dep,        Q = (H_dep - C-)/B
     valve:     Q = Q_law(t_{k+1}), H = C+ - B*Q
 
-with B = a/(g*A) and R = f*dx/(2*g*D*A^2). Envelopes and extremes are accumulated
-over every step; the full H/Q history is never stored (U-19).
+with B = a/(g*A) and R = f*dx/(2*g*D*A^2). The elevation never enters H or Q (M13);
+it only gives the pressure head p/gamma = H - z. Envelopes and extremes are accumulated
+over every step on the output stations (nodes plus profile vertices, M14, U-07); the full
+H/Q history is never stored (U-19).
 
 All quantities are SI (m, s, m3/s).
 """
@@ -83,7 +85,7 @@ class Extreme:
 
 @dataclass(frozen=True)
 class MocResult:
-    """Output of :func:`simulate`. Station arrays follow ``mesh.x_m``."""
+    """Output of :func:`simulate`. Envelope arrays follow ``mesh.station_x_m``."""
 
     mesh: Mesh
     derived: Derived
@@ -94,7 +96,7 @@ class MocResult:
     head_midpoint_m: np.ndarray
     flow_reservoir_m3s: np.ndarray
     flow_valve_m3s: np.ndarray
-    # envelopes per station
+    # envelopes per output station (mesh.station_x_m)
     head_initial_m: np.ndarray
     head_max_m: np.ndarray
     head_min_m: np.ndarray
@@ -116,15 +118,15 @@ class MocResult:
 
     @property
     def pressure_head_initial_m(self) -> np.ndarray:
-        return self.head_initial_m - self.mesh.elevation_m
+        return self.head_initial_m - self.mesh.station_elevation_m
 
     @property
     def pressure_head_max_m(self) -> np.ndarray:
-        return self.head_max_m - self.mesh.elevation_m
+        return self.head_max_m - self.mesh.station_elevation_m
 
     @property
     def pressure_head_min_m(self) -> np.ndarray:
-        return self.head_min_m - self.mesh.elevation_m
+        return self.head_min_m - self.mesh.station_elevation_m
 
     def head_valve_max(self) -> tuple[float, float]:
         """(value, first instant) of the valve head maximum."""
@@ -147,10 +149,11 @@ class MocResult:
         # when H reaches its station extreme. Tie-break (U-25): first instant, then lower x.
         value = pick(envelope)
         candidates = np.flatnonzero(envelope == value)
-        j = min(candidates, key=lambda i: (steps[i], self.mesh.x_m[i]))
+        x = self.mesh.station_x_m
+        j = min(candidates, key=lambda i: (steps[i], x[i]))
         return Extreme(
             value_m=float(value),
-            x_m=float(self.mesh.x_m[j]),
+            x_m=float(x[j]),
             time_s=float(self.time_s[steps[j]]),
         )
 
@@ -166,6 +169,7 @@ def simulate(
 
     ``observer(k, H, Q)``, if given, is called for k = 0 .. n_steps with the node
     arrays of step k. The arrays are reused buffers: copy them to keep them.
+    Envelopes are taken on ``mesh.station_x_m`` (M14).
     """
     der = derive(pipe, mesh)
     b, r = der.wave_constant, der.friction_constant
@@ -178,7 +182,7 @@ def simulate(
     # Steady state (M3, U-04)
     head = h_dep - der.head_loss_m * mesh.x_m / mesh.length_m
     flow = np.full(n + 1, q0)
-    head_initial = head.copy()
+    head_initial = mesh.station_head(head).copy()
 
     time_s = np.arange(n_steps + 1, dtype=float) * dt  # k*dt, not a running sum (U-08)
     head_valve = np.empty(n_steps + 1)
@@ -186,10 +190,11 @@ def simulate(
     flow_res = np.empty(n_steps + 1)
     flow_valve = np.empty(n_steps + 1)
 
-    head_max = head.copy()
-    head_min = head.copy()
-    head_max_step = np.zeros(n + 1, dtype=np.int64)
-    head_min_step = np.zeros(n + 1, dtype=np.int64)
+    n_stations = mesh.station_x_m.size
+    head_max = head_initial.copy()
+    head_min = head_initial.copy()
+    head_max_step = np.zeros(n_stations, dtype=np.int64)
+    head_min_step = np.zeros(n_stations, dtype=np.int64)
 
     head_valve[0] = head[n]
     head_mid[0] = head[mid]
@@ -219,13 +224,14 @@ def simulate(
         head, new_head = new_head, head
         flow, new_flow = new_flow, flow
 
-        higher = head > head_max
+        st_head = mesh.station_head(head)
+        higher = st_head > head_max
         if higher.any():
-            head_max[higher] = head[higher]
+            head_max[higher] = st_head[higher]
             head_max_step[higher] = k
-        lower = head < head_min
+        lower = st_head < head_min
         if lower.any():
-            head_min[lower] = head[lower]
+            head_min[lower] = st_head[lower]
             head_min_step[lower] = k
 
         head_valve[k] = head[n]

@@ -47,3 +47,17 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   en `pn_head_m` (F2-02); si la T_max mostrada queda por debajo de la duración mínima mostrada, el
   422 solo propone engrosar la malla (F2-03); mensajes de validación sin «or», posiciones de lista
   desde 1, magnitudes enormes en notación científica y como máximo 400 caracteres (F2-04).
+
+### Fase 3 — perfil
+
+- Geometría `profile`: L = última progresiva; z(x) lineal entre vértices (M13); `x_m` = nodos ∪
+  vértices, ordenados, con fusión de un vértice a menos de 10⁻⁹·L de un nodo, que conserva la cota
+  del vértice (U-07); `x_is_node` marca los nodos. En los vértices que no son nodo, H se interpola
+  linealmente entre los nodos vecinos en cada paso y las envolventes y extremos se acumulan sobre
+  todas las progresivas (M14, U-19); Q no se interpola (U-07, D-57). H y Q en los nodos no
+  dependen de la cota.
+- Validación del perfil con mensajes en español (HU-2.3 crit. 1–5): 2–500 puntos, misma longitud,
+  empieza en x = 0 m, estrictamente creciente con el punto que falla, toma no más alta que el
+  depósito, y datos de cada geometría; con `profile`, `length_m` y `pipe_elevation_m` son 422
+  (U-22). Los topes de malla y duración (U-03, U-09) usan la L del perfil.
+- Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`).

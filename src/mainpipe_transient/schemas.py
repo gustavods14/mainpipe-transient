@@ -32,6 +32,8 @@ CLOSURE_POINTS_MIN = 2
 CLOSURE_POINTS_MAX = 20
 FIRST_FLOW_REL_TOL = 1e-3  # 0.1 % of Q0 (HU-1.6 crit. 3, U-18)
 FRICTION_NUMBER_MAX = 0.5  # U-03
+PROFILE_POINTS_MIN = 2  # HU-2.3 crit. 2
+PROFILE_POINTS_MAX = 500
 _DURATION_ABS_TOL = 1e-9  # binary noise when comparing durations (same spirit as U-08)
 
 CheckCode = Literal[
@@ -302,15 +304,21 @@ class SolveRequest(BaseModel):
     def _cross_rules_unchecked(self) -> SolveRequest:
         self._check_geometry_fields()
         self._check_closure_flows()
-        if self.geometry == "profile":
-            # Profile validation (HU-2.3) and the profile engine arrive in plan phase 3.
-            return self
-        assert self.length_m is not None
-        self._check_mesh_and_duration(self.length_m)
+        self._check_mesh_and_duration(self.pipe_length_m)
         return self
 
+    @property
+    def pipe_length_m(self) -> float:
+        """L: ``length_m`` (horizontal) or the last profile chainage (profile, HU-2.1)."""
+        if self.geometry == "profile":
+            assert self.profile_x_m is not None
+            return self.profile_x_m[-1]
+        assert self.length_m is not None
+        return self.length_m
+
     def _check_geometry_fields(self) -> None:
-        if self.geometry != "horizontal":
+        if self.geometry == "profile":
+            self._check_profile()
             return
         missing = [n for n in ("length_m", "pipe_elevation_m") if getattr(self, n) is None]
         if missing:
@@ -330,6 +338,56 @@ class SolveRequest(BaseModel):
                 f"{fmt_value(self.pipe_elevation_m)} m es mayor que reservoir_level_m = "
                 f"{fmt_value(self.reservoir_level_m)} m. La cota de la tubería no puede "
                 "superar el nivel del depósito."
+            )
+
+    def _check_profile(self) -> None:
+        """HU-2.3 crit. 1-5 and U-22."""
+        missing = [n for n in ("profile_x_m", "profile_z_m") if getattr(self, n) is None]
+        if missing:
+            raise ValueError(
+                f"Con geometry = profile hay que enviar {' y '.join(missing)} (el perfil "
+                "progresiva-cota); length_m y pipe_elevation_m solo se usan con "
+                "geometry = horizontal."
+            )
+        extra = [n for n in ("length_m", "pipe_elevation_m") if getattr(self, n) is not None]
+        if extra:
+            raise ValueError(
+                f"Con geometry = profile no se admite {' ni '.join(extra)}: la longitud es "
+                "la última progresiva del perfil y las cotas salen de profile_z_m. "
+                "length_m y pipe_elevation_m solo se usan con geometry = horizontal."
+            )
+        xs, zs = self.profile_x_m, self.profile_z_m
+        assert xs is not None and zs is not None
+        n = len(xs)
+        if not PROFILE_POINTS_MIN <= n <= PROFILE_POINTS_MAX:
+            raise ValueError(
+                f"El perfil debe tener entre {PROFILE_POINTS_MIN} y {PROFILE_POINTS_MAX} "
+                f"puntos; profile_x_m tiene {n}."
+            )
+        if len(zs) != n:
+            raise ValueError(
+                "profile_x_m y profile_z_m deben tener el mismo número de puntos: tienen "
+                f"{n} y {len(zs)}."
+            )
+        if xs[0] != 0:
+            raise ValueError(
+                "El perfil debe empezar en x = 0 m (el depósito): profile_x_m[0] = "
+                f"{fmt_value(xs[0])} m."
+            )
+        for i in range(1, n):
+            if not xs[i] > xs[i - 1]:
+                relation = "es igual a" if xs[i] == xs[i - 1] else "es menor que"
+                raise ValueError(
+                    "La progresiva del perfil (profile_x_m) debe ser estrictamente creciente: "
+                    f"x[{i}] = {fmt_value(xs[i])} m {relation} x[{i - 1}] = "
+                    f"{fmt_value(xs[i - 1])} m."
+                )
+        if zs[0] > self.reservoir_level_m:
+            raise ValueError(
+                "La toma queda por encima del nivel del depósito: profile_z_m[0] = "
+                f"{fmt_value(zs[0])} m es mayor que reservoir_level_m = "
+                f"{fmt_value(self.reservoir_level_m)} m. La cota del perfil en x = 0 m no "
+                "puede superar el nivel del depósito."
             )
 
     def _check_closure_flows(self) -> None:

@@ -1,6 +1,6 @@
 """Orchestration of :func:`solve` and the error wrapper (plan 01 §1.1, kit 01 §3, kit 02 §1).
 
-Plan phase 2: horizontal geometry. Still pending by plan phase: profile (phase 3),
+Plan phases 2-3: horizontal and profile geometry. Still pending by plan phase:
 ``checks`` (phase 4; until then the list is empty and ``status`` is derived from it)
 and the player frames (phase 5; ``frame_*`` are null until then).
 """
@@ -14,7 +14,13 @@ import numpy as np
 from pydantic import ValidationError
 
 from ._closure import build_closure_law
-from ._geometry import build_horizontal_mesh, count_steps, default_duration_s
+from ._geometry import (
+    Mesh,
+    build_horizontal_mesh,
+    build_profile_mesh,
+    count_steps,
+    default_duration_s,
+)
 from ._moc import PipeData, simulate
 from ._theory import theory
 from .exceptions import (
@@ -67,21 +73,15 @@ def solve(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _compute(req: SolveRequest) -> SolveResponse:
-    if req.geometry == "profile":
-        raise MainpipeTransientComputationError(
-            "La geometría «profile» todavía no está disponible en esta versión del paquete."
-        )
-    assert req.length_m is not None and req.pipe_elevation_m is not None
-
     q0 = req.initial_flow_lps / _LPS_PER_M3S
     law = build_closure_law(
         req.closure_time_s, [q / _LPS_PER_M3S for q in req.closure_flow_lps], q0
     )
-    mesh = build_horizontal_mesh(req.length_m, req.n_reaches, req.wave_speed_ms, req.pipe_elevation_m)
+    mesh = _build_mesh(req)
     tc = law.closure_duration_s
     duration = req.duration_s
     if duration is None:
-        duration = default_duration_s(tc, req.length_m, req.wave_speed_ms)
+        duration = default_duration_s(tc, mesh.length_m, req.wave_speed_ms)
     pipe = PipeData(
         diameter_m=req.inner_diameter_mm / _MM_PER_M,
         wave_speed_ms=req.wave_speed_ms,
@@ -135,9 +135,9 @@ def _compute(req: SolveRequest) -> SolveResponse:
         pressure_head_midpoint_m=_floats(res.pressure_head_midpoint_m),
         flow_reservoir_lps=_floats(_LPS_PER_M3S * res.flow_reservoir_m3s),
         flow_valve_lps=_floats(_LPS_PER_M3S * res.flow_valve_m3s),
-        x_m=_floats(mesh.x_m),
-        x_is_node=[True] * len(mesh.x_m),
-        elevation_m=_floats(mesh.elevation_m),
+        x_m=_floats(mesh.station_x_m),
+        x_is_node=mesh.station_is_node.tolist(),
+        elevation_m=_floats(mesh.station_elevation_m),
         head_initial_m=_floats(res.head_initial_m),
         pressure_head_initial_m=_floats(res.pressure_head_initial_m),
         head_max_m=_floats(res.head_max_m),
@@ -171,6 +171,14 @@ def _compute(req: SolveRequest) -> SolveResponse:
         frame_head_m=None,
         frame_pressure_head_m=None,
     )
+
+
+def _build_mesh(req: SolveRequest) -> Mesh:
+    if req.geometry == "profile":
+        assert req.profile_x_m is not None and req.profile_z_m is not None
+        return build_profile_mesh(req.profile_x_m, req.profile_z_m, req.n_reaches, req.wave_speed_ms)
+    assert req.length_m is not None and req.pipe_elevation_m is not None
+    return build_horizontal_mesh(req.length_m, req.n_reaches, req.wave_speed_ms, req.pipe_elevation_m)
 
 
 def _floats(values: np.ndarray) -> list[float]:
