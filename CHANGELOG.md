@@ -83,3 +83,8 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
 - Verificación de `_theory` contra `4_Validacion` (V-11) y del predicado por progresiva de D-60
   (V-13). La comparación con Joukowsky / Michaud no genera avisos (HU-3.4).
 - Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`).
+- Menores de la verificación (`doc/verification/05-fase-4.md`): las envolventes de presión se
+  acumulan sobre p/γ = H − z con su propio paso, de modo que, si dos alturas que difieren en 1 ulp
+  dan la misma presión, el extremo global publica el primer instante (U-25, F4-02); test de que una
+  presión igual al límite no es cruce (F4-03). F4-01 (redondeo a 1 decimal de U-26 cerca del
+  umbral: «-10.0 por debajo de -10.0», «100.0 %» sin superar el PN) aceptado por el dueño.

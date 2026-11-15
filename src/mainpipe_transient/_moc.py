@@ -103,6 +103,11 @@ class MocResult:
     head_min_m: np.ndarray
     head_max_step: np.ndarray  # first step reaching the station maximum
     head_min_step: np.ndarray  # first step reaching the station minimum
+    # pressure head envelopes, accumulated on p = H - z itself (U-25, finding F4-02)
+    pressure_max_m: np.ndarray
+    pressure_min_m: np.ndarray
+    pressure_max_step: np.ndarray  # first step reaching the station pressure maximum
+    pressure_min_step: np.ndarray  # first step reaching the station pressure minimum
     # first crossing below the pressure limit (U-25); None if never crossed or no limit given
     first_below_step: int | None = None
     first_below_station: int | None = None
@@ -127,11 +132,12 @@ class MocResult:
 
     @property
     def pressure_head_max_m(self) -> np.ndarray:
-        return self.head_max_m - self.mesh.station_elevation_m
+        # Equal to head_max_m - z: subtracting a fixed z is monotone in floating point.
+        return self.pressure_max_m
 
     @property
     def pressure_head_min_m(self) -> np.ndarray:
-        return self.head_min_m - self.mesh.station_elevation_m
+        return self.pressure_min_m
 
     def head_valve_max(self) -> tuple[float, float]:
         """(value, first instant) of the valve head maximum."""
@@ -161,14 +167,15 @@ class MocResult:
         )
 
     def pressure_head_max_global(self) -> Extreme:
-        return self._global_extreme(self.pressure_head_max_m, self.head_max_step, np.max)
+        return self._global_extreme(self.pressure_max_m, self.pressure_max_step, np.max)
 
     def pressure_head_min_global(self) -> Extreme:
-        return self._global_extreme(self.pressure_head_min_m, self.head_min_step, np.min)
+        return self._global_extreme(self.pressure_min_m, self.pressure_min_step, np.min)
 
     def _global_extreme(self, envelope: np.ndarray, steps: np.ndarray, pick) -> Extreme:
-        # Pressure = H - z with z fixed in time, so the station extreme of p happens
-        # when H reaches its station extreme. Tie-break (U-25): first instant, then lower x.
+        # The steps come from the pressure envelopes themselves, not from H: two heads one
+        # ulp apart can give the same p = H - z, and the first of those instants must win
+        # (F4-02). Tie-break (U-25): first instant, then lower x.
         value = pick(envelope)
         candidates = np.flatnonzero(envelope == value)
         x = self.mesh.station_x_m
@@ -199,6 +206,10 @@ def simulate(
     the lowest pressure head, then the lower x (U-25). The pressure head is computed as
     ``station head - station elevation``, the same float operation as the envelopes, so a
     crossing is recorded if and only if ``min(pressure_head_min_m) < pressure_limit_m``.
+
+    Pressure head envelopes are accumulated on ``p = H - z`` with strict comparisons, so
+    their steps are the first instants at which each station reaches its pressure extreme
+    (U-25), even when two different heads round to the same pressure head.
     """
     der = derive(pipe, mesh)
     b, r = der.wave_constant, der.friction_constant
@@ -218,15 +229,16 @@ def simulate(
     first_station: int | None = None
     first_pressure: float | None = None
 
-    def look_for_crossing(k: int, st_head: np.ndarray) -> None:
+    pressure_initial = head_initial - station_z
+
+    def look_for_crossing(k: int, pressure: np.ndarray) -> None:
         nonlocal first_step, first_station, first_pressure
-        pressure = st_head - station_z
         j = int(np.argmin(pressure))  # lowest pressure; first occurrence = lower x
         if pressure[j] < pressure_limit_m:
             first_step, first_station, first_pressure = k, j, float(pressure[j])
 
     if pressure_limit_m is not None:
-        look_for_crossing(0, head_initial)
+        look_for_crossing(0, pressure_initial)
 
     time_s = np.arange(n_steps + 1, dtype=float) * dt  # k*dt, not a running sum (U-08)
     head_valve = np.empty(n_steps + 1)
@@ -239,6 +251,10 @@ def simulate(
     head_min = head_initial.copy()
     head_max_step = np.zeros(n_stations, dtype=np.int64)
     head_min_step = np.zeros(n_stations, dtype=np.int64)
+    p_max = pressure_initial.copy()
+    p_min = pressure_initial.copy()
+    p_max_step = np.zeros(n_stations, dtype=np.int64)
+    p_min_step = np.zeros(n_stations, dtype=np.int64)
 
     head_valve[0] = head[n]
     head_mid[0] = head[mid]
@@ -277,8 +293,19 @@ def simulate(
         if lower.any():
             head_min[lower] = st_head[lower]
             head_min_step[lower] = k
-            if pressure_limit_m is not None and first_step is None:
-                look_for_crossing(k, st_head)
+        # A strict rise (fall) of p implies one of H, so these only run after the H checks hit.
+        if higher.any() or lower.any():
+            st_p = st_head - station_z
+            p_higher = st_p > p_max
+            if p_higher.any():
+                p_max[p_higher] = st_p[p_higher]
+                p_max_step[p_higher] = k
+            p_lower = st_p < p_min
+            if p_lower.any():
+                p_min[p_lower] = st_p[p_lower]
+                p_min_step[p_lower] = k
+                if pressure_limit_m is not None and first_step is None:
+                    look_for_crossing(k, st_p)
 
         head_valve[k] = head[n]
         head_mid[k] = head[mid]
@@ -301,6 +328,10 @@ def simulate(
         head_min_m=head_min,
         head_max_step=head_max_step,
         head_min_step=head_min_step,
+        pressure_max_m=p_max,
+        pressure_min_m=p_min,
+        pressure_max_step=p_max_step,
+        pressure_min_step=p_min_step,
         first_below_step=first_step,
         first_below_station=first_station,
         first_below_pressure_m=first_pressure,

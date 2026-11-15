@@ -15,10 +15,12 @@ import pytest
 from mainpipe_transient import solve
 from mainpipe_transient._checks import PN_NEAR_LIMIT_PCT, build_checks
 from mainpipe_transient._format import fmt_pressure
-from mainpipe_transient._geometry import build_horizontal_mesh, build_profile_mesh
-from mainpipe_transient._moc import Extreme
+from mainpipe_transient._closure import build_closure_law
+from mainpipe_transient._geometry import build_horizontal_mesh, build_profile_mesh, count_steps
+from mainpipe_transient._moc import Extreme, PipeData, simulate
 
-from test_profile import GENERIC_X, GENERIC_Z, LOMA_X, LOMA_Z, horizontal, nodal_history, profile
+from moc_cases import Recorder
+from test_profile import GENERIC_X, GENERIC_Z, LOMA_X, LOMA_Z, horizontal, profile
 
 REL = 1e-9  # U-29 for derived magnitudes against the Excel reference (V-11)
 
@@ -67,6 +69,38 @@ PROPERTY_CASES = [
 ]
 
 
+# F4-02: two valve heads one ulp apart give the same pressure head at steps 300 and 420;
+# U-25 asks for the first instant (t = 5.556 s, not 7.778 s). Data of the phase-4 report
+# with D, z and H_dep found by a sweep so that the heads differ while p = H - z ties.
+TIE_CASE = horizontal(
+    length_m=500.0,
+    inner_diameter_mm=358.9,
+    pipe_elevation_m=41.93966602377428,
+    darcy_friction_factor=0.0,
+    wave_speed_ms=900.0,
+    n_reaches=30,
+    initial_flow_lps=40.0,
+    reservoir_level_m=204.14449155988194,
+    pn_bar=6.0,
+    density_kgm3=1025.0,
+    gravity_ms2=9.78,
+    closure_time_s=[0.0, 4.0, 8.0],
+    closure_flow_lps=[40.0, 26.5256, 0.0],
+    duration_s=14.6667,
+)
+# F4-03: steady pressure head exactly -10.0 m at x = 300 m (110 m = H_dep + 10, f = 0):
+# equal to the limit is not a crossing. Case from the phase-4 report.
+EQUAL_LIMIT_CASE = profile(
+    [0.0, 300.0, 1000.0],
+    [0.0, 110.0, 0.0],
+    darcy_friction_factor=0.0,
+    duration_s=5.0,
+    closure_time_s=[0.0, 0.05],
+    closure_flow_lps=[100.0, 0.0],
+)
+PROPERTY_CASES += [("f4-02-tie", TIE_CASE), ("f4-03-equal-limit", EQUAL_LIMIT_CASE)]
+
+
 def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """(time_s, x_m, p[k][j]) on every output station and step, via the internal API."""
     if data["geometry"] == "profile":
@@ -77,8 +111,21 @@ def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.nda
         mesh = build_horizontal_mesh(
             data["length_m"], data["n_reaches"], data["wave_speed_ms"], data["pipe_elevation_m"]
         )
-    heads, _, res = nodal_history(mesh, data)
-    pressure = np.array([mesh.station_head(h) for h in heads]) - mesh.station_elevation_m
+    q0 = data["initial_flow_lps"] / 1000.0
+    law = build_closure_law(
+        data["closure_time_s"], [q / 1000.0 for q in data["closure_flow_lps"]], q0
+    )
+    pipe = PipeData(
+        diameter_m=data["inner_diameter_mm"] / 1000.0,
+        wave_speed_ms=data["wave_speed_ms"],
+        friction_factor=data["darcy_friction_factor"],
+        initial_flow_m3s=q0,
+        reservoir_level_m=data["reservoir_level_m"],
+        gravity_ms2=data.get("gravity_ms2", 9.81),
+    )
+    rec = Recorder()
+    res = simulate(pipe, mesh, law, count_steps(data["duration_s"], mesh.dt_s), observer=rec)
+    pressure = np.array([mesh.station_head(h) for h in rec.head]) - mesh.station_elevation_m
     return res.time_s, mesh.station_x_m, pressure
 
 
@@ -467,3 +514,42 @@ def test_boundary_steady():
 )
 def test_fmt_pressure_keeps_the_sign(value, text):
     assert fmt_pressure(value) == text
+
+
+# --------------------------------------------------------------------------- F4-02 / F4-03
+def test_f402_pressure_extreme_tie_takes_the_first_instant():
+    out = solve(TIE_CASE)
+    time_s, x_m, p = station_pressure_history(TIE_CASE)
+    j = out["x_m"].index(500.0)
+    assert p[300, j] == p[420, j] == out["pressure_head_max_global_m"]
+    # a real tie of p only: the heads differ (the later one is higher by one ulp)
+    assert out["head_valve_m"][300] < out["head_valve_m"][420]
+    assert out["pressure_head_valve_m"][300] == out["pressure_head_valve_m"][420]
+    assert out["pressure_head_max_global_time_s"] == out["time_s"][300]
+    c = check(out, "PN_EXCEEDED")
+    assert c["time_s"] == out["time_s"][300]
+    assert "t = 5.556 s" in c["message"]
+
+
+@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
+def test_f402_global_pressure_extremes_follow_u25(name, data):
+    """Global extremes: value, first instant, then lower x, from the full history (U-25)."""
+    out = solve(data)
+    time_s, x_m, p = station_pressure_history(data)
+    for key, value in (("max", p.max()), ("min", p.min())):
+        assert out[f"pressure_head_{key}_global_m"] == value
+        k, j = min(zip(*np.nonzero(p == value)), key=lambda kj: (kj[0], x_m[kj[1]]))
+        assert out[f"pressure_head_{key}_global_time_s"] == time_s[k], name
+        assert out[f"pressure_head_{key}_global_x_m"] == x_m[j], name
+    np.testing.assert_array_equal(out["pressure_head_max_m"], p.max(axis=0))
+    np.testing.assert_array_equal(out["pressure_head_min_m"], p.min(axis=0))
+
+
+def test_f403_pressure_equal_to_the_limit_is_not_a_crossing():
+    out = solve(EQUAL_LIMIT_CASE)
+    assert out["pressure_head_initial_m"][out["x_m"].index(300.0)] == -10.0
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert (c["first_x_m"], c["first_time_s"]) == (1000.0, out["time_s"][41])
+    assert c["first_pressure_head_m"] == pytest.approx(-44.21, abs=0.01)
+    steady = check(out, "STEADY_NEGATIVE_PRESSURE")
+    assert (steady["severity"], steady["value_m"], steady["limit_m"]) == ("warning", -10.0, 0.0)

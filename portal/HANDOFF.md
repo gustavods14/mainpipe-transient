@@ -80,3 +80,8 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   global en un vértice fuera de nodo) y F3-03 (mensaje con «(punto N)» además del literal de
   HU-2.3 crit. 1) corregidos; F3-02 (dos vértices a menos de 10⁻⁹·L del mismo nodo: el nodo toma la
   cota del último) **aceptado por el dueño**, por ser un escalón vertical sin sentido físico.
+- 2026-11-14: fase 4 del plan (verificaciones) entregada en `92a3ded`; `hie-verifier` **pasa**
+  (`doc/verification/05-fase-4.md`), sin bloqueantes ni mayores. Menores: F4-02 (instante del
+  extremo de presión con empate de p/γ y H distinta en 1 ulp) y F4-03 (test de igualdad con el
+  límite) corregidos; F4-01 (mensajes contradictorios por el redondeo a 1 decimal de U-26 cerca
+  del umbral) **aceptado por el dueño**.
