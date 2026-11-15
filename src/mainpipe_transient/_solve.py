@@ -52,6 +52,9 @@ def solve(data: dict[str, Any]) -> dict[str, Any]:
         request = SolveRequest.model_validate(data)
     except ValidationError as exc:
         raise MainpipeTransientValidationError(_format_validation_error(exc)) from exc
+    except Exception as exc:  # a validator bug must not leak a foreign exception (kit 02 §1)
+        logger.exception("unexpected failure while validating the request")
+        raise MainpipeTransientComputationError(_UNEXPECTED_MESSAGE) from exc
 
     try:
         response = _compute(request)
@@ -199,11 +202,23 @@ _TYPE_MESSAGES = {
 }
 
 
+_MAX_MESSAGE = 400  # the portal shows at most 400 characters of detail (kit 02 §3)
+
+
+def _format_loc(loc: tuple) -> str:
+    """``closure_time_s.1`` -> ``closure_time_s (punto 2)``: 1-based like our messages."""
+    name = ".".join(str(p) for p in loc if not isinstance(p, int))
+    points = [p for p in loc if isinstance(p, int)]
+    if points:
+        name = f"{name} (punto {points[-1] + 1})" if name else f"punto {points[-1] + 1}"
+    return name
+
+
 def _format_validation_error(exc: ValidationError) -> str:
     """Spanish, field-named message for a Pydantic ValidationError (kit 02 §3)."""
     parts: list[str] = []
     for err in exc.errors(include_url=False):
-        loc = ".".join(str(p) for p in err.get("loc", ()))
+        loc = _format_loc(tuple(err.get("loc", ())))
         if err["type"] == "value_error":
             # Our own validators: the message is already Spanish and names the field.
             msg = str(err["msg"]).removeprefix("Value error, ")
@@ -212,8 +227,23 @@ def _format_validation_error(exc: ValidationError) -> str:
             if err["type"] == "literal_error":
                 expected = (err.get("ctx") or {}).get("expected")
                 if expected:
-                    text = f"{text}; se admite {expected}"
+                    text = f"{text}; se admite {str(expected).replace(' or ', ' o ')}"
             msg = f"{loc}: {text}." if loc else f"{text[0].upper()}{text[1:]}."
         if msg not in parts:
             parts.append(msg)
-    return " ".join(parts)
+    return _join_within_limit(parts)
+
+
+def _join_within_limit(parts: list[str]) -> str:
+    """Join messages without exceeding the portal limit; say how many were left out."""
+    text = parts[0][:_MAX_MESSAGE]
+    for i, part in enumerate(parts[1:], start=1):
+        remaining = len(parts) - i
+        candidate = f"{text} {part}"
+        tail = f" (y {remaining - 1} error{'es' if remaining - 1 != 1 else ''} más)"
+        if len(candidate) + (len(tail) if remaining > 1 else 0) <= _MAX_MESSAGE:
+            text = candidate
+            continue
+        more = f" (y {remaining} error{'es' if remaining != 1 else ''} más)"
+        return text + more if len(text) + len(more) <= _MAX_MESSAGE else text
+    return text

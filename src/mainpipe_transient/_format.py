@@ -22,6 +22,7 @@ __all__ = [
 ]
 
 _TIME_DECIMALS = 3
+_FIXED_LIMIT = 1e9  # beyond this, fixed notation would print hundreds of digits (F2-04)
 
 
 def _clean_zero(text: str) -> str:
@@ -30,6 +31,8 @@ def _clean_zero(text: str) -> str:
 
 def fmt_fixed(value: float, decimals: int) -> str:
     """Fixed number of decimals (``-0.0`` printed as ``0.0``)."""
+    if not math.isfinite(value) or abs(value) >= _FIXED_LIMIT:
+        return fmt_value(value)
     text = f"{value:.{decimals}f}"
     if float(text) == 0.0:
         text = f"{0.0:.{decimals}f}"
@@ -38,6 +41,8 @@ def fmt_fixed(value: float, decimals: int) -> str:
 
 def fmt_trim(value: float, max_decimals: int) -> str:
     """Up to ``max_decimals`` decimals, trailing zeros and dot removed."""
+    if not math.isfinite(value) or abs(value) >= _FIXED_LIMIT:
+        return fmt_value(value)
     text = f"{value:.{max_decimals}f}"
     if "." in text:
         text = text.rstrip("0").rstrip(".")

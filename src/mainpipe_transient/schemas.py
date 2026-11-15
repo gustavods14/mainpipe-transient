@@ -47,6 +47,11 @@ def _lps(value: float) -> str:
     return fmt_trim(value, 3)
 
 
+def _count(n: int) -> str:
+    """Step count for messages; huge counts in scientific notation (F2-04)."""
+    return str(n) if n < 10**9 else f"{float(n):.3g}"
+
+
 def _closure_duration(times: list[float], flows: list[float]) -> float:
     """Tc: first table instant with Q = 0 (M11). Requires a law ending at 0."""
     return next(t for t, q in zip(times, flows) if q == 0.0)
@@ -284,6 +289,17 @@ class SolveRequest(BaseModel):
     # ------------------------------------------------------------ cross rules
     @model_validator(mode="after")
     def _cross_rules(self) -> SolveRequest:
+        # Pydantic only converts ValueError/AssertionError; extreme magnitudes that pass the
+        # field rules can overflow or divide by zero here (F2-01). Report them as a 422.
+        try:
+            return self._cross_rules_unchecked()
+        except ArithmeticError as exc:
+            raise ValueError(
+                "Los datos producen valores fuera del rango numérico representable: revisa "
+                "las magnitudes extremas de longitud, diámetro, celeridad, caudal y duración."
+            ) from exc
+
+    def _cross_rules_unchecked(self) -> SolveRequest:
         self._check_geometry_fields()
         self._check_closure_flows()
         if self.geometry == "profile":
@@ -370,25 +386,27 @@ class SolveRequest(BaseModel):
         if defaulted:
             head = (
                 f"La duración por defecto Tc + 5·(4L/a) = {fmt_time(duration)} s necesita "
-                f"{steps} pasos con n_reaches = {n} y supera el tope de {MAX_STEPS} pasos."
+                f"{_count(steps)} pasos con n_reaches = {n} y supera el tope de {MAX_STEPS} pasos."
             )
         else:
             head = (
-                f"duration_s = {fmt_value(duration)} s necesita {steps} pasos con "
+                f"duration_s = {fmt_value(duration)} s necesita {_count(steps)} pasos con "
                 f"n_reaches = {n} y supera el tope de {MAX_STEPS} pasos."
             )
 
-        if count_steps(t_min, dt) > MAX_STEPS:
-            # Even the minimum duration does not fit: only a coarser mesh helps.
-            n_fit = max_even_reaches(t_min, length_m, a)
+        t_min_shown = ceil_decimals(t_min)
+        if count_steps(t_min, dt) > MAX_STEPS or t_min_shown > t_max:
+            # The minimum duration does not fit (or no 3-decimal duration lies between the
+            # displayed minimum and maximum, F2-03): only a coarser mesh helps.
+            n_fit = max_even_reaches(t_min_shown, length_m, a)
             if n_fit is None:
                 raise ValueError(
-                    f"{head} La duración mínima Tc + 2L/a = {fmt_time(ceil_decimals(t_min))} s "
+                    f"{head} La duración mínima Tc + 2L/a = {fmt_time(t_min_shown)} s "
                     f"tampoco cabe ni con la malla más gruesa (n_reaches = {N_REACHES_MIN}): "
                     "el cierre es demasiado lento para el tope de pasos de cálculo."
                 )
             raise ValueError(
-                f"{head} La duración mínima Tc + 2L/a = {fmt_time(ceil_decimals(t_min))} s "
+                f"{head} La duración mínima Tc + 2L/a = {fmt_time(t_min_shown)} s "
                 f"supera la máxima admisible con esa malla ({fmt_time(t_max)} s): usa una "
                 f"malla más gruesa, n_reaches <= {n_fit}."
             )

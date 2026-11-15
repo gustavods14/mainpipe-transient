@@ -444,3 +444,80 @@ def test_hu17_crit5_worst_case_time_budget():
         times.append(time.perf_counter() - start)
     assert out["n_steps"] == 10_000
     assert statistics.median(times) < 0.8, times
+
+
+# --------------------------------------------------------------------------- phase-2 findings
+@pytest.mark.parametrize(
+    "changes",
+    [{"duration_s": 1e306}, {"inner_diameter_mm": 1e-170}, {"wave_speed_ms": 1e-320},
+     {"length_m": 1e308}],
+    ids=["duracion-1e306", "diametro-1e-170", "celeridad-1e-320", "longitud-1e308"],
+)
+def test_f201_extreme_magnitudes_never_leak_foreign_exceptions(changes):
+    """F2-01: arithmetic failures in the cross rules are a 422, in solve and in the model."""
+    from pydantic import ValidationError
+
+    from mainpipe_transient import SolveRequest
+
+    msg = reject(case(**changes))
+    assert "fuera del rango numérico" in msg
+    with pytest.raises(ValidationError):  # what FastAPI sees before calling the package
+        SolveRequest.model_validate(case(**changes))
+
+
+def test_f201_validator_bug_is_wrapped(monkeypatch):
+    """A non-ValueError raised while validating still leaves as a package error."""
+    from mainpipe_transient import SolveRequest
+
+    def broken(self):
+        raise KeyError("injected")
+
+    monkeypatch.setattr(SolveRequest, "_check_geometry_fields", broken)
+    with pytest.raises(MainpipeTransientComputationError) as info:
+        solve(case())
+    assert isinstance(info.value.__cause__, KeyError)
+    assert "injected" not in str(info.value)
+
+
+def test_f202_density_and_gravity_enter_pn_head():
+    out = solve(case(density_kgm3=998.2, gravity_ms2=9.78))
+    assert out["pn_head_m"] == pytest.approx(25e5 / (998.2 * 9.78), rel=1e-12)
+    assert solve(case(density_kgm3=1025.0))["pn_head_m"] == pytest.approx(
+        25e5 / (1025.0 * 9.81), rel=1e-12
+    )
+
+
+def test_f203_displayed_maximum_below_minimum_suggests_coarser_mesh():
+    """If Tc + 2L/a lies between the truncated and the exact T_max, do not propose shortening."""
+    data = case(length_m=1234.5, wave_speed_ms=1100.0, n_reaches=200, duration_s=60.0,
+                closure_time_s=[0.0, 53.8691], closure_flow_lps=[100.0, 0.0])
+    msg = reject(data)
+    assert "acorta" not in msg
+    assert "56.114 s" in msg
+    n_fit = int(re_search(r"n_reaches <= (\d+)", msg))
+    out = solve({**data, "n_reaches": n_fit, "duration_s": 56.114})
+    assert out["n_steps"] <= MAX_STEPS
+
+
+def test_f204_literal_message_is_spanish():
+    msg = reject(case(geometry="vertical"))
+    assert " or " not in msg
+    assert "'horizontal' o 'profile'" in msg
+
+
+def test_f204_list_positions_are_one_based():
+    msg = reject(case(closure_time_s=[0.0, "a", 2.0], closure_flow_lps=[100.0, 50.0, 0.0]))
+    assert "closure_time_s (punto 2)" in msg
+
+
+def test_f204_huge_magnitudes_stay_readable():
+    msg = reject(case(duration_s=1e200))
+    assert "1e+200 s" in msg and "2e+201 pasos" in msg
+
+
+def test_f204_many_errors_fit_the_portal_limit():
+    msg = reject(case(wave_speed_ms=2000.0, darcy_friction_factor=1.0, gravity_ms2=1.0,
+                      pn_bar=-1.0, density_kgm3=-1.0, initial_flow_lps=-1.0,
+                      inner_diameter_mm=-1.0, n_reaches=3))
+    assert len(msg) <= 400
+    assert "errores más)" in msg

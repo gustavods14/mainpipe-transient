@@ -42,3 +42,8 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
 - Pendiente por fase: geometría `profile` (fase 3; hoy `solve` responde
   `MainpipeTransientComputationError`), `checks` (fase 4; hoy lista vacía y `status` = `ok`) y
   fotogramas (fase 5; hoy `frame_*` = `null`).
+- Correcciones de la verificación (`doc/verification/03-fase-2.md`): las magnitudes extremas que
+  desbordan en las reglas cruzadas salen como 422 y no como excepción ajena (F2-01); test de ρ y g
+  en `pn_head_m` (F2-02); si la T_max mostrada queda por debajo de la duración mínima mostrada, el
+  422 solo propone engrosar la malla (F2-03); mensajes de validación sin «or», posiciones de lista
+  desde 1, magnitudes enormes en notación científica y como máximo 400 caracteres (F2-04).
