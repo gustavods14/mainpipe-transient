@@ -21,9 +21,12 @@ from mainpipe_transient import (
 REPO = Path(__file__).resolve().parents[1]
 
 
-def test_public_api_phase0():
+def test_public_api():
     assert set(mpt.__all__) == {
         "solve",
+        "SolveRequest",
+        "SolveResponse",
+        "Check",
         "MainpipeTransientError",
         "MainpipeTransientValidationError",
         "MainpipeTransientComputationError",
@@ -58,11 +61,11 @@ def test_exception_hierarchy_and_http_status():
     assert not hasattr(mpt, "MainpipeTransientServiceError")
 
 
-def test_solve_placeholder_only_raises_package_errors():
+def test_solve_rejects_empty_input_with_package_error():
     with pytest.raises(MainpipeTransientError) as info:
         mpt.solve({})
-    assert info.value.http_status == 500
-    assert isinstance(info.value, MainpipeTransientComputationError)
+    assert info.value.http_status == 422
+    assert isinstance(info.value, MainpipeTransientValidationError)
 
 
 def test_import_has_no_side_effects(tmp_path):

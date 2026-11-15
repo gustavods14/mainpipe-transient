@@ -12,16 +12,18 @@ from .exceptions import (
     MainpipeTransientError,
     MainpipeTransientValidationError,
 )
+from .schemas import SCHEMA_VERSION, Check, SolveRequest, SolveResponse
 
 try:
     __version__ = version("mainpipe-transient")
 except PackageNotFoundError:  # pragma: no cover - only when run from an uninstalled tree
     __version__ = "unknown"
 
-SCHEMA_VERSION = "1.0"
-
 __all__ = [
     "solve",
+    "SolveRequest",
+    "SolveResponse",
+    "Check",
     "MainpipeTransientError",
     "MainpipeTransientValidationError",
     "MainpipeTransientComputationError",

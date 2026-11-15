@@ -332,7 +332,7 @@ def test_default_duration_and_step_count():
     res = run(EXCEL.with_(duration_s=None))
     assert res.n_steps == 430
     assert res.duration_s == pytest.approx(21.5, abs=1e-12)
-    assert count_steps(20.0, 0.05) == 400  # 20/0.05 = 400.000...1
+    assert count_steps(20.0, 0.05) == 400  # exact in binary; noise case: test_contract
 
 
 @pytest.mark.parametrize("case", [EXCEL, FRICTIONLESS, EXCEL.with_(pipe_elevation_m=50.0,

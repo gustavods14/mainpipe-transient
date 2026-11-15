@@ -11,9 +11,26 @@ from dataclasses import dataclass
 
 import numpy as np
 
-__all__ = ["Mesh", "build_horizontal_mesh", "count_steps", "default_duration_s"]
+__all__ = [
+    "MAX_STEPS",
+    "N_REACHES_MIN",
+    "N_REACHES_MAX",
+    "Mesh",
+    "build_horizontal_mesh",
+    "time_step_s",
+    "count_steps",
+    "default_duration_s",
+    "max_even_reaches",
+]
 
-_STEP_TOLERANCE = 1e-9  # U-08: 20 / 0.05 is 400.000...1 in floating point
+MAX_STEPS = 10_000  # U-09, D-57
+N_REACHES_MIN = 10  # U-09, HU-1.7
+N_REACHES_MAX = 200
+
+# U-08: absorbs binary noise in T/dt. Example: L = 1000 m, a = 1000 m/s, N = 26 gives
+# dt = 0.0384615..., and 1.0 / dt = 26.000000000000004; without the tolerance a 1 s
+# simulation would take 27 steps instead of 26.
+_STEP_TOLERANCE = 1e-9
 
 
 @dataclass(frozen=True)
@@ -33,11 +50,16 @@ class Mesh:
         return self.n_reaches // 2
 
 
+def time_step_s(length_m: float, n_reaches: int, wave_speed_ms: float) -> float:
+    """dt = (L/N)/a, evaluated exactly as the mesh does (Courant = 1)."""
+    return (length_m / n_reaches) / wave_speed_ms
+
+
 def build_horizontal_mesh(
     length_m: float, n_reaches: int, wave_speed_ms: float, pipe_elevation_m: float
 ) -> Mesh:
     dx = length_m / n_reaches
-    dt = dx / wave_speed_ms
+    dt = time_step_s(length_m, n_reaches, wave_speed_ms)
     x = length_m * np.arange(n_reaches + 1, dtype=float) / n_reaches
     x[-1] = length_m  # last node is L exactly (U-07)
     z = np.full(n_reaches + 1, float(pipe_elevation_m))
@@ -54,3 +76,11 @@ def count_steps(duration_s: float, dt_s: float) -> int:
 def default_duration_s(closure_duration_s: float, length_m: float, wave_speed_ms: float) -> float:
     """Tc + 5 * (4L/a) (plan 01 §1.3)."""
     return closure_duration_s + 5.0 * (4.0 * length_m / wave_speed_ms)
+
+
+def max_even_reaches(duration_s: float, length_m: float, wave_speed_ms: float) -> int | None:
+    """Largest even N in [10, 200] whose step count for ``duration_s`` fits MAX_STEPS."""
+    for n in range(N_REACHES_MAX, N_REACHES_MIN - 1, -2):
+        if count_steps(duration_s, time_step_s(length_m, n, wave_speed_ms)) <= MAX_STEPS:
+            return n
+    return None
