@@ -7,7 +7,7 @@
 | Distribución | `mainpipe-transient` |
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.0` |
-| Versión del contrato (`SCHEMA_VERSION`) | `2.0` (plan congelado el 2026-11-15; G4 pendiente de aprobar) — antes `1.0` |
+| Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15) — antes `1.0` |
 | Commit a pinear | — (se llena en la entrega) |
 
 ## Etapas
@@ -18,7 +18,7 @@
 | 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.0 |
 | 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
-| 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
+| 4 | Decisiones del portal (G4) | aprobada | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | pendiente | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
@@ -137,3 +137,14 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
 - 2026-11-15: `hie-prototyper` ajustó `portal/ui-spec.json` y `portal/prototype.html` a D-63
   (marcador del cruce desde el aviso, tramo solo con aviso) sin cambiar el uso aprobado en G3;
   esquema validado con jsonschema. El dueño lo revisa en G4.
+- 2026-11-15: **G4 aprobada de nuevo.** D-63 … D-66 en el commit `29593af` del portal, con CI en
+  verde según el dueño; ningún DR abierto; plan congelado con `SCHEMA_VERSION` = `"2.0"`. El dueño
+  acepta U-34 (6) («detener la fase 5 y abrir DR» si una medición supera 3 500 000 B), el criterio
+  de ≥ 20 B por número en la receta adversaria, la banda de < 0.0005 m (aviso y marcador sin tramo)
+  y el riesgo de empate de redondeo en los casos dorados. Etapa 5: se rehace la fase 5 (contrato
+  2.0) y sigue la 6.
+- 2026-11-15: el portal publicó el kit 3.0.1 (`de21e5c`, *patch*, DT-33): solo reescribe la IA de
+  `kit 03 §3`. Sin efecto en esta app (sin IA, D-62); el diseño sigue con 3.0.0 hasta que
+  `hie-architect` adopte la versión nueva. El mismo commit abre en el portal DT-34 (columna de
+  entradas sticky de `solver-2col` más alta que el viewport; nombra esta app, prioridad baja): es
+  deuda del patrón del portal, no pide nada al upstream.

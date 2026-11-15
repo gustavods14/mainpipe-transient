@@ -25,8 +25,8 @@
 > vuelve a borrador con `SCHEMA_VERSION` `"2.0"` propuesta. Lo que toca decisiones del portal sale
 > en **DR-7 … DR-10** (D-57 (9), D-57 (4), D-58). ρ y g fijos no se piden: los campos de entrada los
 > decide el upstream (regla central del kit; plan U-40). **DR-7, DR-8 y DR-9 bloquean la nueva G4.**
-> 2026-11-15: el portal resolvió DR-7 … DR-10 (D-63 … D-66, alternativa (a) en los cuatro; sin
-> commit en el portal al registrarlo). Ningún bloqueante abierto. D-63, D-64 y D-65 añaden
+> 2026-11-15: el portal resolvió DR-7 … DR-10 (D-63 … D-66, alternativa (a) en los cuatro;
+> commit `29593af` del portal). Ningún bloqueante abierto. D-63, D-64 y D-65 añaden
 > condiciones de verificación y D-66 retira U-32: obligan a enmendar el plan y `portal/ui-spec.json`
 > antes de re-congelar (ver «Pendiente tras D-63 … D-66» al final).
 > 2026-11-15: plan enmendado con D-63 … D-66 (`hie-architect`) y **congelado** con
