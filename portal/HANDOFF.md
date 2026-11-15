@@ -88,3 +88,10 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
 - 2026-11-14: reverificación de la fase 4 sobre `60e19c1`: **pasa** (F4-02 y F4-03 cerrados, F4-01
   aceptado). Menor nuevo F4-04 (sin test del empate de p/γ en el mínimo) cubierto con un test, sin
   cambios en `src/`.
+- 2026-11-15: fase 5 del plan (serie para el reproductor) entregada en `2c51470`; `hie-verifier`
+  **pasa** (`doc/verification/06-fase-5.md`), sin bloqueantes ni mayores. Medido: peor respuesta
+  3 167 900 B ≤ 3 500 000 B, peor petición 19 919 B ≤ 65 536 B, peor caso con fotogramas < 0.8 s;
+  no se aplica la regla de ajuste de U-34. Menor F5-01 (la receta no es el máximo en bytes: datum
+  negativo 3 284 238 B; entradas extremas sin sentido físico hasta 4 129 794 B, por debajo de
+  4,5 MB) **aceptado por el dueño**, con la condición de documentarlo en `portal/INTEGRATION.md`
+  en la fase 6.
