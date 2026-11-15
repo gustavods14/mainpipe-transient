@@ -15,6 +15,16 @@
 > decisión P5 de G1, la tabla de entradas de este archivo y lo que el plan fijó (U-08, U-09,
 > D-57). Los errores de N y de la duración siguen en HU-1.6 (crits. 9, 10 y 13).
 >
+> Enmienda 2026-11-15 (decisiones del dueño tras G4). Etapa 1 reabierta para esta enmienda.
+> (1) Para reducir el tamaño de la respuesta, las listas de salida en m y L/s se redondean a
+> 3 decimales al serializar; `time_s` y los escalares no (nueva sección «Precisión de las listas
+> de salida»). Se ajustan las tolerancias que el redondeo hace inverificables: HU-1.1 crit. 4 y
+> HU-1.5 crits. 2 y 3. (2) La densidad y la gravedad dejan de ser entradas: se quitan
+> `density_kgm3` y `gravity_ms2` de la tabla de entradas (con sus rangos, > 0 y 9.7 ≤ g ≤ 9.9) y
+> quedan como constantes fijas ρ = 1000 kg/m³ y g = 9.81 m/s² (nueva sección «Constantes fijas»).
+> Ningún criterio de este archivo calculaba con otra densidad u otra gravedad. No cambia el
+> cálculo ni el resto del alcance.
+>
 > **Método**: Método de las Características en H y Q, malla con número de Courant = 1
 > (Δx = L/N, Δt = Δx/a), fricción de Darcy-Weisbach con f constante. Contornos: depósito de nivel
 > constante (H = H_dep) aguas arriba; caudal impuesto Q(t) en la válvula aguas abajo. Régimen
@@ -37,8 +47,6 @@
 | `initial_flow_lps` | L/s | 100 (0.1 m³/s en el Excel) | > 0 |
 | `reservoir_level_m` | m | 100 | cualquier cota, en el mismo datum que la tubería |
 | `pipe_elevation_m` | m | 0 | ≤ `reservoir_level_m` (solo con geometría `horizontal`) |
-| `density_kgm3` | kg/m³ | 1000 | > 0 |
-| `gravity_ms2` | m/s² | 9.81 | 9.7 ≤ g ≤ 9.9 |
 | `pn_bar` | bar | 25 | > 0 (lo usa F3) |
 | `min_allowed_pressure_head_m` | m.c.a. | −10 (por defecto) | ≥ −10.33 (lo usa F3); sin ajuste por altitud |
 | `closure_time_s` | s | 0, 0.5, 1, 1.5, 2, 5, 10, 20 | 2 a 20 puntos; empieza en 0; estrictamente creciente |
@@ -48,6 +56,14 @@
 
 N es par para que el punto medio (x = L/2) sea un nodo de cálculo (propuesta; el plan puede
 cambiarla). Tc (`closure_duration_s`) es el instante en que la ley llega a Q = 0.
+
+### Constantes fijas
+
+*(Añadida 2026-11-15, decisión del dueño.)* La densidad del agua y la aceleración de la gravedad
+**no son entradas**: son constantes del cálculo con los valores del Excel, **ρ = 1000 kg/m³** y
+**g = 9.81 m/s²**, y el usuario no puede cambiarlas. Intervienen en Joukowsky / Michaud
+(a·V₀/g, 2·L·V₀/(g·Tc)) y en el paso de PN a m.c.a. (F3). Antes eran las entradas `density_kgm3`
+(> 0) y `gravity_ms2` (9.7 ≤ g ≤ 9.9).
 
 ## Salidas
 
@@ -60,6 +76,29 @@ cambiarla). Tc (`closure_duration_s`) es el instante en que la ley llega a Q = 0
 | Extremos | `head_valve_max_m` + `head_valve_max_time_s`, `head_valve_min_m` + `head_valve_min_time_s`, `pressure_head_max_global_m` + su `x_m` y `time_s`, `pressure_head_min_global_m` + su `x_m` y `time_s` |
 
 «Punto medio» = progresiva x = L/2. «Presión» = altura de presión p/γ = H − z, en m.c.a.
+
+### Precisión de las listas de salida
+
+*(Añadida 2026-11-15, decisión del dueño.)* Las listas en m y L/s se redondean a **3 decimales**
+(1 mm de columna, 0.001 L/s) **solo al serializar** la respuesta:
+
+- series temporales: `head_valve_m`, `head_midpoint_m`, `pressure_head_valve_m`,
+  `pressure_head_midpoint_m`, `flow_reservoir_lps`, `flow_valve_lps`;
+- columnas por progresiva (F1 y F2): `x_m`, `elevation_m`, `head_initial_m`, `head_max_m`,
+  `head_min_m`, `pressure_head_max_m`, `pressure_head_min_m`;
+- fotogramas de F4: `frame_head_m`, `frame_x_m` (`04-serie-reproduccion.md`).
+
+**No se redondean** `time_s` ni `frame_time_s` (`dt_s` puede no ser múltiplo de 1 ms, o ser menor:
+a 3 decimales los instantes quedarían irregulares o repetidos), ni ningún escalar (derivados,
+extremos con sus progresivas e instantes, campos de F3, datos de los `checks`): pesan menos del
+0.1 % de la respuesta y algunos son pequeños. El cálculo, los extremos y los `checks` usan
+precisión completa. Justificación física: 1 mm de columna y 0.001 L/s están muy por debajo de la
+incertidumbre del modelo.
+
+Cómo se leen los criterios con el redondeo: (a) una lista y un escalar del mismo valor se comparan
+con el escalar redondeado a 3 decimales; (b) dos listas redondeadas desde el mismo valor siguen
+siendo iguales; (c) una diferencia calculada con listas redondeadas (p. ej. H − z) puede apartarse
+hasta 0.001 m de la lista redondeada equivalente (más 1·10⁻⁹ m de coma flotante).
 
 ---
 
@@ -87,7 +126,9 @@ el cierre de la válvula a partir de los datos de la tubería, el depósito y la
    `flow_reservoir_lps` = −100 ± 0.1 para 1.05 s < t < 3.0 s.
 4. **Cota de la tubería.** Dado el caso del Excel con `pipe_elevation_m` = 50 y
    `reservoir_level_m` = 150, cuando se calcula, entonces todas las alturas piezométricas son las
-   del caso original + 50 m y todas las presiones son idénticas (± 1·10⁻⁶ m).
+   del caso original + 50 m y todas las presiones son idénticas, con ± 1·10⁻⁶ m en los escalares
+   (extremos) y ± 0.001 m en las listas, que salen redondeadas a 3 decimales.
+   *(Enmendado 2026-11-15: antes ± 1·10⁻⁶ m también en las listas.)*
 5. El tiempo de cálculo del caso del Excel es < 1 s medido en el upstream (`kit 01 §6`).
 6. Entregable `portal/` completo según el kit v3.0.0.
 
@@ -148,11 +189,14 @@ clase de tubería tramo a tramo y localizar dónde puede haber depresión.
 1. Dado cualquier cálculo válido, entonces en cada progresiva `head_max_m` ≥ `head_initial_m` ≥
    `head_min_m` y `pressure_head_max_m` ≥ `pressure_head_min_m`.
 2. Dado el caso del Excel, entonces `head_max_m` y `head_min_m` en x = L coinciden con
-   `head_valve_max_m` y `head_valve_min_m`, y `pressure_head_max_global_m` /
-   `pressure_head_min_global_m` y sus instantes coinciden con los de la hoja `4_Validacion`
-   (± 0.1 m, ± `dt_s`).
-3. Con geometría `horizontal`, `elevation_m` = `pipe_elevation_m` en todas las progresivas y
-   `pressure_head_*_m` = `head_*_m` − `pipe_elevation_m`.
+   `head_valve_max_m` y `head_valve_min_m` redondeados a 3 decimales, y
+   `pressure_head_max_global_m` / `pressure_head_min_global_m` y sus instantes coinciden con los
+   de la hoja `4_Validacion` (± 0.1 m, ± `dt_s`).
+   *(Enmendado 2026-11-15: las envolventes salen redondeadas y los extremos escalares no.)*
+3. Con geometría `horizontal`, `elevation_m` = `pipe_elevation_m` redondeado a 3 decimales en
+   todas las progresivas y `pressure_head_*_m` = `head_*_m` − `pipe_elevation_m` con
+   |diferencia| ≤ 0.001 m + 1·10⁻⁹ m.
+   *(Enmendado 2026-11-15: antes igualdades sin tolerancia.)*
 4. Entregable `portal/` completo según el kit v3.0.0.
 
 ## HU-1.6 — Recibir un error claro cuando los datos no permiten calcular

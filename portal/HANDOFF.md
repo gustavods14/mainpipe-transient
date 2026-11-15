@@ -15,11 +15,11 @@
 | # | Etapa | Estado | Fecha | Artefacto | Kit |
 |---|---|---|---|---|---|
 | 0 | Inicio | aprobada | 2026-11-14 | `portal/HANDOFF.md` | 3.0.0 |
-| 1 | Historias (G1) | aprobada | 2026-11-14 | `doc/stories/` | 3.0.0 |
-| 2 | Plan (G2) | aprobada | 2026-11-14 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
-| 3 | Prototipo (G3) | aprobada | 2026-11-14 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
-| 4 | Decisiones del portal (G4) | aprobada | 2026-11-14 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
-| 5 | Construcción (G5) | en curso | 2026-11-14 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
+| 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.0 |
+| 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
+| 3 | Prototipo (G3) | reabierta | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
+| 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
+| 5 | Construcción (G5) | pendiente | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
@@ -95,3 +95,29 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   negativo 3 284 238 B; entradas extremas sin sentido físico hasta 4 129 794 B, por debajo de
   4,5 MB) **aceptado por el dueño**, con la condición de documentarlo en `portal/INTEGRATION.md`
   en la fase 6.
+- 2026-11-15: **enmienda tras G4**; se reabren las etapas 1–4 y la 5 vuelve a `pendiente`. El
+  dueño decide, a partir del desglose del tamaño de la respuesta (fotogramas 57 %, series 40 % del
+  peor caso de 3,16 MB; unos 18 B por número): (1) redondear a 3 decimales las listas de salida en
+  m y L/s, con `time_s` y los escalares sin redondear (choca con D-57 (9)); (2) quitar
+  `frame_pressure_head_m`, porque p/γ = H − z se deriva de `frame_head_m` y `elevation_m` (choca
+  con D-57 (4); cambio de forma: `SCHEMA_VERSION` 2.0); (3) retirar el texto de fase del
+  reproductor (U-32; DR-1 punto 2 / D-58). Estimado: peor caso de 3,16 MB a ≈ 0,96 MB. Las fases
+  0–4 siguen valiendo; la 5 y su verificación se rehacen tras la nueva G4. Orden: historias
+  (`hie-product-owner`) → plan y DR nuevos (`hie-architect`) → prototipo (`hie-prototyper`) →
+  decisión del portal → re-congelar → construir y verificar.
+- 2026-11-15: la enmienda suma una cuarta decisión del dueño: (4) la densidad y la gravedad
+  pasan a ser constantes de código, ρ = 1000 kg/m³ y g = 9.81 m/s² (los valores por defecto
+  actuales, que el dueño confirma). Se quitan `density_kgm3` y `gravity_ms2` de la entrada y del
+  formulario. Es un cambio de forma de la petición, ya cubierto por el paso a `SCHEMA_VERSION`
+  2.0. Los nombres y campos de entrada los decide el upstream (regla central del kit), así que no
+  requiere pedido al portal.
+- 2026-11-15: G1 aprobada de nuevo con la enmienda: `doc/stories/` recoge las decisiones 1–4. El
+  dueño acepta la tolerancia de 0.001 m + 1·10⁻⁹ m para comparar presiones derivadas con listas
+  redondeadas y el caso nuevo de HU-4.2 crit. 4 (dt = 1/3000 s). Queda para `hie-architect` o
+  `hie-api` confirmar que HU-2.1 crit. 1 y HU-1.3 crit. 1 siguen valiendo con el redondeo.
+- 2026-11-15: G2 aprobada de nuevo con la enmienda: plan `doc/plans/01-golpe-ariete-v1.md`
+  (borrador, contrato propuesto `SCHEMA_VERSION` 2.0, U-39 … U-41) y DR-7 … DR-10 abiertos. El
+  dueño acepta las dos recomendaciones de la Parte 1: la banda de ±0.0005 m entre el tramo rojo
+  y el aviso con las envolventes al milímetro (DR-7 (a); si el portal no la admite, envolventes de
+  presión sin redondear y retoque de historias) y mantener min(1001, ⌊50 000 / n⌋) fotogramas
+  (DR-9 (a), cierra F5-01).

@@ -3,8 +3,8 @@
 > Formato y ciclo de vida: `doc/upstream-kit/08-decision-requests.md` en el portal.
 > Lo escribe `hie-architect`. Los estados y las `D-NN` las copia el usuario al volver del portal.
 > Plan de origen: `doc/plans/01-golpe-ariete-v1.md` (kit 3.0.0; aprobado en G2, reabierto y
-> reaprobado el 2026-11-14 con D-57 … D-62; **congelado** el 2026-11-14 para G4, `SCHEMA_VERSION`
-> `"1.0"`).
+> reaprobado el 2026-11-14 con D-57 … D-62; congelado el 2026-11-14 para G4, `SCHEMA_VERSION`
+> `"1.0"`; **de vuelta a borrador** el 2026-11-15 por la enmienda tras G4, con `"2.0"` propuesta).
 > 2026-11-14: DR-1 y DR-4 reformulados tras aprobar el prototipo (G3) para pedir exactamente lo
 > que proponen `portal/ui-spec.json` y `portal/prototype.html` (U-30). DR-3: contexto y
 > alternativas actualizados al panel aprobado en G3, misma pregunta. DR-2: añadida la palanca de
@@ -19,6 +19,12 @@
 > reaprobada. Plan **congelado** (G4 pendiente de `/hie-flow approve 4`): todos los pedidos
 > resueltos, ningún bloqueante abierto; lo único pendiente son las mediciones de D-57, programadas
 > en las fases 5 y 6 de la construcción.
+> 2026-11-15: **enmienda tras G4.** El dueño decide, a partir del desglose del tamaño medido en la
+> fase 5 (peor caso 3 156 607 B: fotogramas 57 %, series 40 %; ≈ 18 B por número), redondear las
+> listas de salida, quitar `frame_pressure_head_m`, retirar el texto de fase y fijar ρ y g. El plan
+> vuelve a borrador con `SCHEMA_VERSION` `"2.0"` propuesta. Lo que toca decisiones del portal sale
+> en **DR-7 … DR-10** (D-57 (9), D-57 (4), D-58). ρ y g fijos no se piden: los campos de entrada los
+> decide el upstream (regla central del kit; plan U-40). **DR-7, DR-8 y DR-9 bloquean la nueva G4.**
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|
@@ -28,8 +34,19 @@
 | DR-4 | ¿Se admite la asignación de colores del panel «Transitorio» con tokens existentes, sin escala de color por presión, incluidos cuatro usos que se apartan del rol documentado del token? | gráfico | no — integración | resuelto | D-60 |
 | DR-5 | ¿Cómo se muestran las fórmulas de Joukowsky y Michaud sin renderizador LaTeX? | dependencia | no — integración de la pantalla (etapa 3 aprobada) | resuelto | D-61 |
 | DR-6 | ¿Tiene la app análisis de IA? | IA | no | resuelto | D-62 |
+| DR-7 | ¿Admite el portal que el paquete entregue a 3 decimales las listas de salida en m y L/s, frente a «sin redondeo» de D-57 (9)? | funcionalidad | **sí** — precisión de la Capa 1 2.0 (G4) | abierto | — |
+| DR-8 | ¿Admite el portal retirar `frame_pressure_head_m` y que el panel derive p/γ(x, t) = `frame_head_m` − `elevation_m`, frente a las dos matrices de D-57 (4)? | funcionalidad | **sí** — forma de la Capa 1 2.0 (G4) | abierto | — |
+| DR-9 | Con una sola matriz `frame_*`, ¿qué tope de fotogramas rige? | funcionalidad | **sí** — tope de la Capa 1 y guarda de D-57 (2) (G4) | abierto | — |
+| DR-10 | ¿Acepta el portal que el panel «Transitorio» salga sin el texto de fase que aprobó D-58? | funcionalidad | no — pantalla; la Capa 1 no cambia | abierto | — |
 
-Dependencias entre pedidos: DR-4 aplica con cualquier resultado de DR-1 (envolventes, régimen,
+Dependencias entre los pedidos de la enmienda (2026-11-15): **DR-9 depende de DR-8**: solo tiene
+objeto si sale `frame_pressure_head_m` (DR-8 (a), (c) o (d)); con DR-8 (b) rige D-57 (4) tal cual.
+DR-7 es independiente de DR-8 y DR-9, pero sus cifras de tamaño suponen DR-8 (a) y DR-9 (a); la
+cota absoluta de DR-9 no depende de DR-7. DR-7 (a) suaviza una condición de **D-60 (1)** (el
+predicado del cruce en rojo, ver su contexto); no se abre un pedido aparte porque lo que la decide
+es qué listas se redondean, que es la pregunta de DR-7. DR-10 es independiente de los otros tres.
+
+Dependencias entre pedidos (DR-1 … DR-6): DR-4 aplica con cualquier resultado de DR-1 (envolventes, régimen,
 límites y series se pintan igual); solo el color del instante t depende de que DR-1 admita
 reproductor. DR-3 conserva su pregunta de la etapa 2 con el contexto del prototipo de G3, que usa
 su alternativa (a): `solver-2col` con el panel «Transitorio» en la columna de resultados. Ya no
@@ -42,7 +59,11 @@ ninguna dependencia de backend (`numpy` y `pydantic` ya están, `kit 07 §1`); n
 externo; el presupuesto de tiempo cabe en < 1 s con los topes del plan (`kit 01 §6`, plan §2).
 El gráfico del perfil con envolventes y las series temporales son series ECharts, dentro de la
 regla (`kit 05 §3`). Tras G3 tampoco se piden la tubería coloreada por presión ni el mapa de calor
-H(x, t): el prototipo aprobado no los usa (ver DR-1 y DR-4).
+H(x, t): el prototipo aprobado no los usa (ver DR-1 y DR-4). En la enmienda del 2026-11-15
+tampoco se pide nada por fijar ρ = 1000 kg/m³ y g = 9.81 m/s²: quitar campos de entrada lo decide
+el upstream (regla central del kit). Si una petición los trae, el paquete responde 422 con un
+mensaje en español que lo explica (plan U-40); el portal solo tiene que dejar de mostrarlos en el
+formulario (etapa 3).
 
 ---
 
@@ -352,6 +373,213 @@ campos de contexto ya están en la respuesta.
 
 **Qué cambia en el contrato o la pantalla según lo que se decida.** Contrato: nada. Pantalla:
 sección `ai` de `ui-spec.json` y el panel de IA.
+
+---
+
+## DR-7 — ¿Admite el portal que el paquete entregue a 3 decimales las listas de salida en m y L/s, frente a «sin redondeo» de D-57 (9)?
+
+| | |
+|---|---|
+| Estado | abierto |
+| Bloquea | **sí** — fija la precisión de la Capa 1 2.0 y lo que congelan los casos dorados (G4) |
+| Categoría | funcionalidad (tamaño de respuesta; el kit no tiene categoría propia, hallazgo en el plan §8) |
+| Decisión del portal | — |
+
+**Contexto.** D-57 (9) dejó dicho: «Sin redondeo en el router […]. Bajar peso redondeando sería
+una enmienda de HU-4.1 aguas arriba, con su propio pedido». Este es ese pedido. La medición de la
+fase 5 (plan U-34) dio 3 156 607 B en la receta del peor caso, con ≈ 18 B por número porque cada
+`float64` sale con todas sus cifras; fotogramas 57 %, series 40 %, perfiles 3 %, `checks` y
+escalares < 0,1 %. El dueño decidió (historias reaprobadas en G1 el 2026-11-15):
+
+- **Se redondean a 3 decimales** (1 mm de columna, 0.001 L/s) todas las listas en m, m.c.a. y L/s:
+  seis series temporales, ocho columnas por progresiva, `frame_x_m` y `frame_head_m`.
+- **No se redondean** `time_s` ni `frame_time_s` (Δt puede ser menor que 1 ms, p. ej. 1/3000 s, o
+  no múltiplo de él) ni ningún escalar (extremos con su progresiva e instante, PN, límite,
+  referencia teórica, campos de `checks`).
+- **El redondeo lo hace el paquete** al construir la respuesta, no el router (`kit 03 §1`, D-57
+  (h)); el cálculo, los extremos y los `checks` siguen con precisión completa (plan U-39).
+
+HU-4.1 ya está enmendada en consecuencia (el desglose a 10⁻⁹ que citaba D-57 (h) se mantiene donde
+dos listas llevan el mismo valor y pasa a 0.001 m donde la pantalla resta dos listas). Un efecto
+sobre **D-60 (1)** («`--color-chart-critical` solo donde una envolvente cruza un umbral, con el
+mismo predicado que el aviso `danger`»): con `pressure_head_max_m` / `pressure_head_min_m` a
+3 decimales y `pn_head_m`, el límite y los `checks` con precisión completa, el predicado de la
+pantalla coincide con el aviso **salvo si el extremo global queda a menos de 0.0005 m del umbral**;
+en esa banda puede haber aviso sin tramo rojo o tramo rojo sin aviso, y manda el aviso. Es del
+mismo orden que el roce que el dueño ya aceptó en los mensajes (hallazgo F4-01: valores a
+1 decimal cerca del umbral).
+
+Tamaños `[calculado]` sobre la medición del dueño con un prototipo del redondeo (963 538 B), con
+DR-8 (a) y DR-9 (a), a ≈ 6,7 B por número redondeado:
+
+| | Peor caso realista | Caso del Excel con fotogramas |
+|---|---|---|
+| Contrato 1.0 (medido) | 3 167 900 B | 355 716 B |
+| (a) | ≈ 0,96 MB (medido por el dueño) | ≈ 89 kB (medido por el dueño) |
+| (b) | ≈ 0,98 MB | ≈ 89 kB |
+| (c) | ≈ 1,7 MB | ≈ 0,1 MB |
+| (d) | ≈ 2,3 MB | ≈ 0,2 MB |
+
+La cota para entradas de magnitud absurda (≈ 3,2 MB, DR-9) no depende de este pedido: con números
+enormes el redondeo no acorta nada.
+
+**Alternativas.**
+
+| # | Alternativa | A favor | En contra |
+|---|---|---|---|
+| a | **3 decimales en todas las listas en m, m.c.a. y L/s** (decisión del dueño, plan U-39) | −70 % en el peor caso y −75 % en el caso típico sin quitar un dato; regla única y sencilla de documentar; router intacto | El predicado de D-60 (1) admite la banda de ±0.0005 m; una lista ya no se compara con igualdad con un escalar (hay que redondear el escalar; reglas en `INTEGRATION.md`) |
+| b | (a) **salvo `pressure_head_max_m` y `pressure_head_min_m`**, que salen con precisión completa | D-60 (1) se cumple sin banda: el aviso existe si y solo si alguna progresiva cumple el predicado; solo +≈ 16 kB | Regla con excepción; envolventes de presión con 17 cifras junto a todo lo demás al milímetro; obliga a enmendar otra vez las historias (lista de F1, HU-2.2 crit. 2, HU-4.2 crit. 3) |
+| c | **Solo los fotogramas** (`frame_head_m`, `frame_x_m`) | Series, envolventes y el predicado de D-60 intactos | Deja sin tocar el 40 % de la respuesta (series): ≈ 1,7 MB; obliga a enmendar las historias |
+| d | **Sin redondeo** (D-57 (9) tal cual); solo se adelgaza con DR-8 | Nada cambia en la precisión | ≈ 2,3 MB en el peor caso y ≈ 0,2 MB en el típico; se pierde la mayor palanca; obliga a enmendar las historias |
+
+**Recomendación del upstream.** (a). 1 mm de columna y 0.001 L/s están muy por debajo de la
+incertidumbre del modelo (f constante, celeridad, ley de cierre); la banda de D-60 (1) es de medio
+milímetro, en ella manda el aviso calculado con precisión completa, y se documenta. Si el portal
+exige la igualdad lógica exacta de D-60 (1), (b) la da por 16 kB.
+
+**Qué cambia en el contrato o la pantalla según lo que se decida.** (a): plan §1.4 y U-39 tal cual;
+U-36 y V-13 con la banda; `ui-spec.json` cambia una frase del predicado («sin j que lo cumpla […]
+tampoco hay aviso», salvo en la banda); `INTEGRATION.md` documenta la regla de precisión y cómo
+comparar. (b): las dos envolventes de presión salen de la lista de U-39 y U-36 vuelve a la
+igualdad exacta; enmienda de historias. (c): U-39 se reduce a `frame_*`. (d): U-39 se retira. En
+todas, el router sigue sin transformar la respuesta.
+
+---
+
+## DR-8 — ¿Admite el portal retirar `frame_pressure_head_m` y que el panel derive p/γ(x, t) = `frame_head_m` − `elevation_m`?
+
+| | |
+|---|---|
+| Estado | abierto |
+| Bloquea | **sí** — forma de la Capa 1 2.0 (campo de salida retirado) |
+| Categoría | funcionalidad |
+| Decisión del portal | — |
+
+**Contexto.** D-57 (4) dimensionó la película con **dos** matrices, H y p/γ («Con dos matrices (H y
+p/γ) es la fórmula de (a)»). La presión de cada fotograma es, por definición, la altura menos la
+cota de la progresiva: el paquete la calcula exactamente así (`frame_head_m` − `elevation_m`; el
+dueño midió diferencia 0.0 entre las dos matrices de la 1.0), y el prototipo de G3 ya la deriva en
+el navegador (`portal/prototype.html`, función `updateInstant`). El dueño decidió retirarla (F4,
+HU-4.1 crits. 1–3 enmendados en G1). Es una **resta de dos columnas alineadas**, sin celeridad,
+fricción ni nada que dé el método: no duplica lógica hidráulica en el sentido de D-58 (4), pero sí
+pone una operación en el frontend, y D-57 contaba con la matriz; por eso se pide. Con DR-7 (a) la
+presión derivada se aparta como mucho 0.001 m de la redondeada que daba la 1.0. Las series de
+presión en la válvula y en L/2 y las envolventes de presión **siguen** en la respuesta (con ellas
+se dibujan los umbrales, los cruces en rojo de D-60 y los avisos). Es un cambio de forma que rompe:
+`SCHEMA_VERSION` pasa a `"2.0"` (plan U-15), junto con la retirada de `density_kgm3` y `gravity_ms2`
+de la entrada (plan U-40, sin pedido).
+
+**Alternativas.**
+
+| # | Alternativa | A favor | En contra |
+|---|---|---|---|
+| a | **Retirar `frame_pressure_head_m`**; la pestaña «Presión p/γ(x)» dibuja `frame_head_m[k][j]` − `elevation_m[j]` | −0,33 MB en el peor caso (con DR-7 (a)) o, si se quisiera, el doble de fotogramas con el mismo tamaño (DR-9); el prototipo aprobado ya lo hace; menos superficie de contrato | Una resta por fotograma en el frontend (≤ 699 progresivas); la película ya no trae p/γ «hecha» |
+| b | **Mantener las dos matrices** (a 3 decimales si DR-7 lo admite) | D-57 (4) tal cual; la pantalla no resta nada | ≈ +0,33 MB en el peor caso; con magnitudes absurdas la cota sube a ≈ 4,4 MB, por encima de 3,5 MB (hallazgo F5-01 sigue abierto y documentado) |
+| c | **Mantener solo la presión** y retirar `frame_head_m`; la pestaña «Altura H(x)» suma la cota | Mismo tamaño que (a); la presión, que es lo que mira el ingeniero, llega sin operar | H es la variable del método y la que se compara con las series (HU-4.1 crit. 1); obligaría a reescribir F4 y la pestaña H(x) |
+| d | **Matriz de presión opcional**, detrás de una entrada `include_frame_pressure` (falso por defecto) | Por defecto igual que (a); quien la quiera la pide | El portal nunca la enviaría (como `frame_flow_lps`, D-57 (3)): superficie de contrato y pruebas sin consumidor (plan U-33) |
+
+**Recomendación del upstream.** (a). Pierde cero información, es lo que ya hace el prototipo
+aprobado y, con DR-9 (a), deja la respuesta dentro de 3,5 MB para toda entrada admitida.
+
+**Qué cambia en el contrato o la pantalla según lo que se decida.** (a): `SolveResponse` sin
+`frame_pressure_head_m` (plan §1.4, U-11, U-24); en `ui-spec.json` la serie «p/γ en el instante t»
+deja de apuntar a `response.frame_pressure_head_m[]` y se declara como `frame_head_m` −
+`elevation_m`; DR-9 decide el tope. (b): la Capa 1 conserva el campo (a la precisión que diga
+DR-7), DR-9 queda sin objeto y rige D-57 (4) literal; la pantalla no cambia. (c): sale
+`frame_head_m`, se enmiendan F4 y la pestaña H(x). (d): entrada nueva y campo anulable; la pantalla
+como en (a).
+
+---
+
+## DR-9 — Con una sola matriz `frame_*`, ¿qué tope de fotogramas rige?
+
+| | |
+|---|---|
+| Estado | abierto |
+| Bloquea | **sí** — fija el tope de fotogramas de la Capa 1 (plan U-10) y la entrada de la guarda de D-57 (2) |
+| Categoría | funcionalidad (tamaño de respuesta) |
+| Decisión del portal | — |
+
+**Depende de DR-8**: solo tiene objeto si sale `frame_pressure_head_m` (DR-8 (a), (c) o (d)).
+
+**Contexto.** D-57 (4) fija «presupuesto de fotogramas = 100 000 celdas entre todas las matrices
+`frame_*` que viajan por defecto» y da la fórmula para dos matrices, min(1001, ⌊50 000 /
+n_progresivas⌋); su razón dice que quitar una matriz «se convierte en resolución temporal». Leído
+al pie de la letra con una sola matriz, el tope pasaría a min(1001, ⌊100 000 / n⌋). El upstream
+propone **no** hacerlo, por un hecho que la medición de la fase 5 sacó a la luz (hallazgo F5-01,
+aceptado por el dueño): con entradas admitidas pero de magnitud absurda (cotas o caudales de
+10¹⁵⁰; `reservoir_level_m` no tiene rango) la respuesta del contrato 1.0 llegó a 4 129 794 B, por
+encima de los 3,5 MB de D-57 (1). Con números así el redondeo de DR-7 no acorta nada: cada número
+puede ocupar 25 B (`-1.2345678901234567e+150` y su coma). La cota absoluta es entonces
+(números de la respuesta) × 25 B:
+
+| Tope | Peor caso realista: fotogramas, `frame_stride` | Peor caso realista, tamaño | Cota absoluta |
+|---|---|---|---|
+| min(1001, ⌊50 000 / n⌋) | 70, 145 | ≈ 0,96 MB | ≤ 127 300 números → **≈ 3,2 MB** |
+| min(1001, ⌊60 000 / n⌋) | 84, 121 | ≈ 1,03 MB | ≤ 137 300 números → ≈ 3,45 MB |
+| min(1001, ⌊100 000 / n⌋) | 142, 71 | ≈ 1,30 MB | ≤ 177 300 números → ≈ 4,4 MB |
+
+(Peor caso realista: N = 200, 500 vértices, 699 progresivas, 10 000 pasos; con L/a = 1,12 s, un
+fotograma cada 0,81 s con el primer tope y cada 0,40 s con el último. Caso del Excel: 401
+fotogramas con cualquiera de los tres, sin submuestreo.)
+
+**Alternativas.**
+
+| # | Alternativa | A favor | En contra |
+|---|---|---|---|
+| a | **Mantener la fórmula de hoy**, min(1001, ⌊50 000 / n⌋): ≤ 50 000 celdas en la única matriz | D-57 (1) se cumple para **toda** entrada admitida (≤ 3,2 MB), lo que cierra F5-01; los mismos fotogramas que hoy; es el estimado del dueño | Usa la mitad del presupuesto de D-57 (4); en las mallas más grandes la película sigue siendo gruesa |
+| b | **D-57 (4) al pie de la letra**: min(1001, ⌊100 000 / n⌋) | El doble de fotogramas en las mallas grandes; sigue la razón de D-57 (más resolución en vez de menos peso) | Con magnitudes absurdas, ≈ 4,4 MB: por encima del techo y a un paso de los 4,5 MB de producción; F5-01 sigue abierto |
+| c | **El mayor presupuesto que respeta la cota**: min(1001, ⌊60 000 / n⌋) | +20 % de fotogramas con D-57 (1) cumplido para toda entrada | Margen de la cota ≈ 1,5 %: cualquier campo nuevo o cambio de formato lo rompe |
+| d | (b) **acotando las entradas** (p. ej. cotas, longitudes y caudales con un máximo físico) para que ningún número pase de ≈ 11 B | El doble de fotogramas y una cota absoluta ≈ 2 MB | Topes de entrada arbitrarios y nuevos 422 que el usuario puede encontrar con datos reales extremos; enmienda de historias (HU-1.6, HU-2.3) |
+
+**Recomendación del upstream.** (a). La enmienda nació para alejarse del techo; con (a) el techo
+deja de depender de que la entrada sea sensata y la regla de D-57 (1) se cumple sin excepción. Si
+el portal prefiere resolución, (b) es viable con la documentación de F5-01 que ya aceptó el dueño.
+
+**Qué cambia en el contrato o la pantalla según lo que se decida.** (a): U-10 conserva su fórmula
+(el presupuesto efectivo se describe como 50 000 celdas en una matriz); `INTEGRATION.md` publica
+la cota absoluta y la guarda de D-57 (2) mide la misma receta. (b) / (c): cambia la constante de U-10
+y el número de fotogramas del peor caso; con (b), `INTEGRATION.md` mantiene el aviso de F5-01. (d):
+además, rangos nuevos en `SolveRequest`. La pantalla no cambia en ninguna (lee `frame_stride`).
+
+---
+
+## DR-10 — ¿Acepta el portal que el panel «Transitorio» salga sin el texto de fase que aprobó D-58?
+
+| | |
+|---|---|
+| Estado | abierto |
+| Bloquea | no — pantalla; la Capa 1 no cambia |
+| Categoría | funcionalidad |
+| Decisión del portal | — |
+
+**Contexto.** D-58 (1) incluyó en el alcance del panel el «texto de fase» y D-58 (4) lo fijó como
+función pura en `lib/mainpipe-transient/`, con tests, a partir de `reflection_time_s`,
+`wave_period_s`, `closure_duration_s` y el instante (DR-1, punto 2; plan U-32). El dueño lo retira
+de v1 (épica, «Fuera de v1»; F4). Es una reducción de alcance, pero el portal aprobó el panel con
+ese texto, así que se le pide. Los tres tiempos **siguen** en la respuesta (se muestran como
+indicadores). Observación técnica del upstream: las cinco frases describen el ciclo ideal de un
+cierre rápido; con un cierre lento (Tc > 2L/a) la regla del prototipo dice «Reflexión en el
+depósito» mientras la válvula sigue cerrando, así que el texto puede confundir justo en los casos
+de Michaud.
+
+**Alternativas.**
+
+| # | Alternativa | A favor | En contra |
+|---|---|---|---|
+| a | **Sin texto de fase en v1** | Menos código y pruebas en el frontend; ninguna frase engañosa en cierres lentos; la Capa 1 no cambia | El usuario pierde una guía de lectura de la onda mientras reproduce |
+| b | **Mantenerlo como fijó D-58 (4)** | Lo aprobado; ayuda a leer la animación | Contra la decisión del dueño; habría que reabrir otra vez las historias (F4, épica); el texto es impreciso en cierres lentos |
+| c | **Nota estática** bajo el panel: qué pasa en 0–L/a, L/a–2L/a… con los valores de 2L/a, 4L/a y Tc, sin cambiar con el instante | Conserva la explicación sin lógica por fotograma | Otro elemento de pantalla que nadie pidió; no dice en qué fase está el instante actual |
+| d | **Fase como dato de la Capa 1**: un código por fotograma (`frame_phase`, `Literal`) que el paquete calcula teniendo en cuenta Tc, y el portal traduce | Correcto también en cierres lentos; el portal no razona sobre la onda | Campo nuevo, historia nueva, ≈ 1–8 kB más; textos de dominio que fijar; contradice la decisión del dueño |
+
+**Recomendación del upstream.** (a), la decisión del dueño; si el portal quiere conservar una ayuda,
+(c) no toca el contrato.
+
+**Qué cambia en el contrato o la pantalla según lo que se decida.** Contrato: nada en (a), (b) y
+(c); en (d), campo nuevo `frame_phase` (aditivo, dentro de la 2.0 antes de congelarla). Pantalla:
+(a) quita de `ui-spec.json` y de `prototype.html` el texto de fase (y la función que lo calcula) y
+U-32 se retira; (b) nada; (c) sustituye el texto por una nota fija; (d) el texto sale del código
+por fotograma.
 
 ---
 

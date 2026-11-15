@@ -13,6 +13,20 @@
 > como el panel «Transitorio» aprobado en G3 (barra de reproducción común y cuatro pestañas de
 > gráficos con un instante compartido); se retiran la tubería coloreada por presión y el mapa de
 > calor, descartados. Afecta al corte R3, a «Fuera de v1» (portal) y a la pregunta 1.
+>
+> Enmienda 2026-11-15 (decisiones del dueño tras G4; etapa 1 reabierta). Las tres primeras salen
+> del desglose del tamaño de la respuesta (peor caso de 3,16 MB: fotogramas 57 %, series 40 %,
+> perfiles 3 %; unos 18 B por número):
+> (1) las listas de salida en m y L/s se redondean a 3 decimales al serializar; `time_s`,
+> `frame_time_s` y los escalares no (F1, «Precisión de las listas de salida»; F4);
+> (2) se retira `frame_pressure_head_m`: el portal obtiene p/γ(x, t) como `frame_head_m` −
+> `elevation_m` (F4, HU-4.1);
+> (3) el texto de la fase de la onda del reproductor sale de v1 (F4); los escalares
+> `reflection_time_s`, `wave_period_s` y `closure_duration_s` se mantienen;
+> (4) la densidad y la gravedad dejan de ser entradas: ρ = 1000 kg/m³ y g = 9.81 m/s² quedan como
+> constantes fijas (F1, «Constantes fijas»; F3).
+> Estimado del dueño: peor caso de 3,16 MB a ≈ 0,96 MB; caso del Excel con fotogramas de 356 KB a
+> ≈ 89 KB. Afecta a la tabla de funcionalidades (F4), a «Fuera de v1» y a las preguntas 1, 2 y 10.
 
 ## Problema de ingeniería
 
@@ -48,10 +62,10 @@ adelante (p. ej. parada de bombas), que **no** entran en este alcance.
 
 | # | Funcionalidad | Versión | Archivo |
 |---|---|---|---|
-| F1 | Transitorio por cierre de válvula en tubería horizontal: entradas del Excel, ley de cierre, malla y duración, régimen inicial, series en válvula / punto medio / depósito y envolventes | **v1** | `01-transitorio-cierre-valvula.md` |
+| F1 | Transitorio por cierre de válvula en tubería horizontal: entradas del Excel (ρ y g como constantes fijas desde el 2026-11-15), ley de cierre, malla y duración, régimen inicial, series en válvula / punto medio / depósito y envolventes | **v1** | `01-transitorio-cierre-valvula.md` |
 | F2 | Perfil real de la tubería (x, z) ingresado como tabla de puntos; presión p/γ = H − z(x) y envolventes de presión sobre el perfil | **v1** | `02-perfil-tuberia.md` |
 | F3 | Verificaciones del resultado (`checks`): timbraje PN, presión mínima admisible / riesgo de separación de columna, presión negativa en régimen; referencia teórica Joukowsky / Michaud como dato informativo | **v1** | `03-verificaciones.md` |
-| F4 | Serie temporal completa H(x, t) y p/γ(x, t) para que el portal pueda reproducir el transitorio (PLAY). Sin Q(x, t) desde D-57 (2026-11-14) | **v1** | `04-serie-reproduccion.md` |
+| F4 | Serie temporal completa H(x, t) para que el portal pueda reproducir el transitorio (PLAY); el portal obtiene p/γ(x, t) = H − z. Sin Q(x, t) desde D-57 (2026-11-14) ni p/γ(x, t) en la respuesta desde el 2026-11-15; listas a 3 decimales | **v1** | `04-serie-reproduccion.md` |
 | F5 | Otros escenarios (p. ej. parada de bombas, dispositivos de protección) | posterior, sin fecha | — |
 
 **Corte (R3).** F1–F4 forman la v1. F1–F3 son el núcleo de ingeniería; F4 solo añade a la
@@ -75,15 +89,27 @@ respuesta datos que el cálculo ya produce. El reproductor que los usa es del po
   Q(t) en la válvula, como el Excel.
 - Ajuste de la presión mínima admisible por altitud o temperatura: en v1 es un valor que ingresa
   el usuario (por defecto −10 m.c.a.).
+- **Densidad y gravedad como datos del usuario** (`density_kgm3`, `gravity_ms2`): retiradas de la
+  entrada el 2026-11-15; en v1 son constantes fijas, ρ = 1000 kg/m³ y g = 9.81 m/s².
 - Carga del perfil desde un archivo: no pedida; queda solo como idea, sin pedido al portal.
 - **Caudal en cada fotograma y progresiva**, Q(x, t) (`frame_flow_lps`): retirado de v1 por D-57
   (2026-11-14), ni por defecto ni detrás de una opción, porque la pantalla aprobada no lo usa y el
   portal no la enviaría. El caudal en el tiempo sigue en la válvula y en el depósito (HU-1.4).
+- **Presión en cada fotograma y progresiva** como campo de la respuesta (`frame_pressure_head_m`):
+  retirada el 2026-11-15. No se pierde información: el portal la obtiene como `frame_head_m` −
+  `elevation_m`. Las series de presión en la válvula y en L/2 y las envolventes de presión siguen
+  en la respuesta.
+- **Precisión completa en las listas de salida**: desde el 2026-11-15 las listas en m y L/s salen
+  redondeadas a 3 decimales (`time_s`, `frame_time_s` y los escalares, no).
+- **Texto de la fase de la onda en el reproductor** («Cierre en curso…», «La onda de sobrepresión
+  viaja…», «Reflexión en el depósito…», «Reflexión en la válvula cerrada…», «La depresión se
+  refleja… (ciclo N)»): retirado de v1 el 2026-11-15.
 - **Del portal, no de esta API**: el reproductor del transitorio —panel «Transitorio» con barra de
-  reproducción común y cuatro pestañas de gráficos con un instante compartido, texto de la fase de
-  la onda y salto al instante desde los avisos (D-58)—, el gráfico del perfil, la exportación de
-  resultados y el análisis de IA (sin IA en v1, D-62). Los escribe el `product-owner` del portal
-  cuando la API se entregue, previa decisión del portal donde corresponda.
+  reproducción común y cuatro pestañas de gráficos con un instante compartido y salto al instante
+  desde los avisos (D-58), sin texto de fase desde el 2026-11-15—, el gráfico del perfil, la
+  exportación de resultados y el análisis de IA (sin IA en v1, D-62). Los escribe el
+  `product-owner` del portal cuando la API se entregue, previa decisión del portal donde
+  corresponda.
 
 ## Decisiones de alcance de G1 (resueltas el 2026-11-14)
 
@@ -114,12 +140,16 @@ decisiones internas.
    parte es nueva.
    *Resuelta por el portal (D-58, 2026-11-14): panel «Transitorio» de G3, barra común y cuatro
    pestañas ECharts con instante compartido.*
+   *Anotada 2026-11-15: el texto de fase sale de v1 (decisión del dueño), lo que toca D-58 (4) y
+   U-32 (DR-1 punto 2); ver pregunta 10.*
 2. **Tamaño de la respuesta** de F4: (nodos + vértices) × fotogramas × 3 variables. Con la malla
    del Excel son ≈ 25 000 números; con N y duración configurables crece. Fijar un tope de
    fotogramas o un submuestreo, y si hace falta, un pedido al portal.
    *Resuelta por el portal (D-57, 2026-11-14): son 2 variables (H y p/γ; Q sale de F4), con un
    presupuesto de celdas entre las dos matrices y sin redondeo; la cifra del tope la fija el plan
    (U-10).*
+   *Anotada 2026-11-15: queda 1 variable (H; p/γ la deriva el portal) y las listas se redondean a
+   3 decimales, contra D-57 (4) y D-57 (9); ver pregunta 10.*
 3. **Rangos de N y de la duración** y **presupuesto de tiempo** (`kit 01 §6`, < 1 s): trivial con
    N = 20 × 400 pasos; el número de pasos crece con N y con la duración (N·a·T/L). Fijar los topes
    que garanticen el presupuesto (HU-1.7 propone 10 ≤ N ≤ 200).
@@ -139,3 +169,23 @@ decisiones internas.
    al añadir escenarios (`SCHEMA_VERSION`, `kit 01 §3`).
 9. **Unidades de entrada**: las historias proponen L/s y mm (el Excel usa m³/s y m); el usuario no
    las objetó. Las fija el plan.
+10. **Enmienda del 2026-11-15 frente a lo que ya decidió el portal** *(añadida 2026-11-15)*. Lo
+    que el upstream no puede cerrar solo:
+    a. **Redondeo a 3 decimales** de las listas en m y L/s (`frame_head_m` y `frame_x_m`
+       incluidas): choca con D-57 (9), «sin redondeo». Candidato a DR.
+    b. **Retirar `frame_pressure_head_m`**: choca con D-57 (4) y cambia la forma de la respuesta
+       (`SCHEMA_VERSION`, `kit 01 §3`; el `HANDOFF.md` anota 2.0). El panel «Transitorio» pasa a
+       derivar p/γ en el navegador; el prototipo de G3 ya lo hace. Candidato a DR.
+    c. **Retirar el texto de fase**: D-58 (4) y U-32 lo daban como función del frontend; el
+       portal debe saber que sale de v1. Candidato a DR o nota en el mismo DR.
+    d. **Presupuesto de celdas con una sola matriz `frame_*`**: el tope U-10 (min(1001,
+       ⌊50 000/n⌋), 100 000 celdas entre dos matrices) se escribió para dos matrices. El dueño no
+       pide cambiar el tope y su estimado (≈ 0,96 MB) lo supone igual; si se reinterpreta, lo
+       decide el plan con el portal.
+    e. **Densidad y gravedad fijas**: quitar `density_kgm3` y `gravity_ms2` de la entrada es otro
+       cambio de forma del contrato (`SCHEMA_VERSION`). Queda por fijar qué pasa si una petición
+       aún los trae (rechazo 422 o se ignoran), según la política de campos extra del contrato
+       (`kit 01`), y si ρ y g se devuelven como eco en la respuesta. El panel de entradas aprobado
+       en G3 debe dejar de mostrarlos.
+    f. **Medición de tamaños** (U-34): rehacerla con la respuesta nueva; las cifras medidas en la
+       fase 5 (3 167 900 B; F5-01 hasta 4 129 794 B) dejan de ser las del contrato.

@@ -11,6 +11,12 @@
 > **Decisiones de G1 (2026-11-14)**: el perfil se ingresa como tabla de puntos (x, z) y el portal
 > lo muestra en un gráfico del perfil (P2); x es la progresiva a lo largo del eje de la tubería y
 > L = x final del perfil (P3).
+>
+> Enmienda 2026-11-15 (decisión del dueño tras G4): las columnas por progresiva se redondean a
+> 3 decimales al serializar, con la regla de F1 («Precisión de las listas de salida»); los
+> extremos escalares y sus progresivas no. Se ajustan las tolerancias que el redondeo hace
+> inverificables: HU-2.1 crit. 2 y HU-2.2 crits. 1, 2 y 3. No cambia el cálculo ni el resto del
+> alcance. Etapa 1 reabierta para esta enmienda.
 
 ## Entradas (además de las de F1)
 
@@ -32,6 +38,9 @@ Con geometría `profile` no se usan `length_m` ni `pipe_elevation_m`.
   `pressure_head_max_m` y `pressure_head_min_m` están alineadas, para que el portal dibuje el
   perfil, la piezométrica inicial y las envolventes en un mismo gráfico de serie sin
   transformarlas (`kit 01 §4`, `kit 05 §3`).
+- Esas columnas salen redondeadas a 3 decimales (enmienda 2026-11-15; regla y excepciones en F1,
+  «Precisión de las listas de salida»). Las presiones se calculan con precisión completa y se
+  redondean al final, igual que las alturas.
 
 ---
 
@@ -49,7 +58,8 @@ no a una tubería horizontal.
    geometría `horizontal` y `length_m` = 1000.
 2. Dado un perfil (0; 0), (500; 40), (1000; 0), cuando se calcula, entonces `elevation_m` = 20 en
    x = 250 m, y en cada progresiva `pressure_head_min_m` = `head_min_m` − `elevation_m` y
-   `pressure_head_max_m` = `head_max_m` − `elevation_m` (± 1·10⁻⁶ m).
+   `pressure_head_max_m` = `head_max_m` − `elevation_m` con |diferencia| ≤ 0.001 m + 1·10⁻⁹ m.
+   *(Enmendado 2026-11-15: antes ± 1·10⁻⁶ m; las tres columnas salen redondeadas a 3 decimales.)*
 3. Dado un perfil de dos puntos (0; 0), (1000; 0), cuando se calcula, entonces el resultado es
    idéntico al de la geometría `horizontal` con `length_m` = 1000 y `pipe_elevation_m` = 0.
 4. Dado un perfil cuyo último punto es x = 1250 m, entonces la longitud de cálculo es 1250 m:
@@ -67,14 +77,18 @@ es el crítico y dónde haría falta protección.
 
 1. Dado un perfil con un vértice en x = 520 m (entre los nodos de 500 y 550 m con
    `n_reaches` = 20), cuando se calcula, entonces `x_m` contiene 520 y `elevation_m` en esa
-   progresiva es la cota del vértice.
-2. Dado cualquier perfil, cuando se calcula, entonces `pressure_head_min_global_m` es el menor
-   valor de `pressure_head_min_m`, `pressure_head_max_global_m` el mayor de `pressure_head_max_m`,
-   y sus progresivas informadas están en `x_m`.
+   progresiva es la cota del vértice redondeada a 3 decimales.
+   *(Enmendado 2026-11-15: «redondeada a 3 decimales».)*
+2. Dado cualquier perfil, cuando se calcula, entonces `pressure_head_min_global_m` redondeado a
+   3 decimales es el menor valor de `pressure_head_min_m`, `pressure_head_max_global_m` redondeado
+   a 3 decimales es el mayor de `pressure_head_max_m`, y sus progresivas informadas, redondeadas a
+   3 decimales, están en `x_m`.
+   *(Enmendado 2026-11-15: los extremos escalares no se redondean y las columnas sí.)*
 3. Dado el caso del Excel con el perfil con loma (0; 0), (500; 40), (1000; 0), cuando se calcula,
-   entonces `pressure_head_min_m` en x = 500 m es exactamente 40 m menor (± 1·10⁻⁶ m) que en el
-   mismo punto del caso horizontal: el supuesto horizontal subestima la depresión de cada punto
-   alto en su altura (antecedente técnico de `CLAUDE.md`).
+   entonces `pressure_head_min_m` en x = 500 m es 40 m menor (|diferencia| ≤ 0.001 m + 1·10⁻⁹ m)
+   que en el mismo punto del caso horizontal: el supuesto horizontal subestima la depresión de cada
+   punto alto en su altura (antecedente técnico de `CLAUDE.md`).
+   *(Enmendado 2026-11-15: antes «exactamente», ± 1·10⁻⁶ m.)*
 4. Entregable `portal/` completo según el kit v3.0.0.
 
 ## HU-2.3 — Recibir un error claro cuando el perfil no es válido

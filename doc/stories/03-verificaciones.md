@@ -16,6 +16,15 @@
 > ingresa el usuario, −10 m.c.a. por defecto, sin ajuste por altitud (P7); la separación de
 > columna se avisa con un mensaje claro y no se modela (P8).
 >
+> Enmienda 2026-11-15 (decisiones del dueño tras G4). Etapa 1 reabierta para esta enmienda.
+> (1) La densidad y la gravedad dejan de ser entradas: ρ = 1000 kg/m³ y g = 9.81 m/s² son
+> constantes fijas (F1, «Constantes fijas»); se quitan `density_kgm3` y `gravity_ms2` de
+> «Entradas que usa» y HU-3.1 crit. 1 queda como caso de referencia con ρ y g fijos. Ningún
+> criterio de esta página calculaba con otra densidad u otra gravedad. (2) Con el redondeo a
+> 3 decimales de las listas de salida (F1, «Precisión de las listas de salida»), los `checks` y
+> sus datos de localización se siguen calculando con precisión completa y no se redondean;
+> HU-3.2 crit. 2 se precisa en consecuencia. No cambia el resto del alcance.
+>
 > **Códigos y severidades**: propuestos aquí (los decide el upstream, regla central del kit);
 > `hie-architect` fija en el plan su correspondencia con la paleta de estado del portal (D-13,
 > `kit 01 §5`). Cada aviso lleva `code`, `severity`, `message` en español con unidades y
@@ -28,16 +37,19 @@
 
 ## Entradas que usa
 
-`pn_bar`, `density_kgm3`, `gravity_ms2`, `min_allowed_pressure_head_m` (F1), más las envolventes
-y extremos calculados en F1/F2.
+`pn_bar`, `min_allowed_pressure_head_m` (F1), más las envolventes y extremos calculados en F1/F2.
+La densidad y la gravedad son constantes fijas, ρ = 1000 kg/m³ y g = 9.81 m/s² (F1, «Constantes
+fijas»; enmienda 2026-11-15).
 
 ## Salidas
 
 | Grupo | Campos |
 |---|---|
 | Estado | `status` (`ok` · `warning` · `error`), `checks[]` (`code`, `severity`, `message`, datos de localización) |
-| Timbraje | `pn_head_m` (PN expresado en m.c.a. = PN·10⁵/(ρ·g)), `pressure_max_pn_ratio_pct` |
+| Timbraje | `pn_head_m` (PN expresado en m.c.a. = PN·10⁵/(ρ·g), con ρ y g fijos), `pressure_max_pn_ratio_pct` |
 | Referencia teórica (informativa, sin aviso) | `maneuver_type` (`rapid` · `slow`), `theoretical_head_rise_m` (ΔH teórico), `moc_head_rise_valve_m` (ΔH MOC), `theory_deviation_pct` (diferencia en %); como desglose: `joukowsky_head_rise_m`, `michaud_head_rise_m` (`null` si la maniobra es rápida), `full_pulse_length_m` (`null` si la maniobra es lenta) |
+
+Todos estos campos son escalares y no se redondean (F1, «Precisión de las listas de salida»).
 
 ## Avisos propuestos
 
@@ -62,7 +74,9 @@ de cierre.
 
 **Criterios de aceptación**
 
-1. Dado ρ = 1000 kg/m³, g = 9.81 m/s² y `pn_bar` = 25, entonces `pn_head_m` = 254.84 ± 0.01.
+1. Dado `pn_bar` = 25, con las constantes fijas ρ = 1000 kg/m³ y g = 9.81 m/s², entonces
+   `pn_head_m` = 254.84 ± 0.01.
+   *(Enmendado 2026-11-15: ρ y g dejan de ser datos del caso y pasan a ser constantes fijas.)*
 2. Dado el caso sin fricción con H_dep = 100 m (presión máxima 244.21 m en toda la tubería) y
    `pn_bar` = 25, entonces `pressure_max_pn_ratio_pct` = 95.8 ± 0.1 y hay un aviso
    `PN_NEAR_LIMIT`.
@@ -89,10 +103,13 @@ la presión en ese punto e instante, la presión mínima global y el límite usa
 1. Dado el caso del Excel (presión mínima −37.9 m.c.a., límite −10 m.c.a.), cuando se calcula,
    entonces hay un aviso `COLUMN_SEPARATION_RISK`, `status` = `error`, y el resultado se devuelve
    completo (no es un error 422).
-2. Dado cualquier caso con `COLUMN_SEPARATION_RISK`, entonces `first_x_m` es una progresiva de
-   `x_m`, `first_time_s` es un instante de `time_s`, la presión en ese punto e instante es menor
-   que el límite, y en ningún punto de la tubería la presión es menor que el límite en un instante
-   anterior.
+2. Dado cualquier caso con `COLUMN_SEPARATION_RISK`, entonces `first_x_m`, redondeada a
+   3 decimales, es una progresiva de `x_m`, `first_time_s` es un instante de `time_s`, y, evaluado
+   con precisión completa (antes del redondeo de la serialización), la presión en ese punto e
+   instante es menor que el límite y en ningún punto de la tubería la presión es menor que el
+   límite en un instante anterior.
+   *(Enmendado 2026-11-15: `x_m` sale redondeada y la comparación con el límite se hace con
+   precisión completa.)*
 3. Dado el caso sin fricción con H_dep = 100 m (presión mínima −44.21 m), entonces
    `first_x_m` = 1000 y `first_time_s` = 2.05 ± 0.05.
 4. El `message` de `COLUMN_SEPARATION_RISK` dice, en este orden: que la presión cae por debajo del
