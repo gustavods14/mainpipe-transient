@@ -11,8 +11,8 @@ Scheme (identical to the Excel sheet ``2_Malla_MOC``, U-02)::
 with B = a/(g*A) and R = f*dx/(2*g*D*A^2). The elevation never enters H or Q (M13);
 it only gives the pressure head p/gamma = H - z. Envelopes and extremes are accumulated
 over every step on the output stations (nodes plus profile vertices, M14, U-07), together
-with the first crossing of the minimum allowed pressure head; the full H/Q history is never
-stored (U-19).
+with the first crossing of the minimum allowed pressure head and, if asked for, the station
+heads of the player frames (U-10); the full H/Q history is never stored (U-19).
 
 All quantities are SI (m, s, m3/s).
 """
@@ -112,6 +112,16 @@ class MocResult:
     first_below_step: int | None = None
     first_below_station: int | None = None
     first_below_pressure_m: float | None = None
+    # player frames (U-10): station heads at frame_steps; None if no frames were asked for
+    frame_steps: np.ndarray | None = None
+    frame_head_m: np.ndarray | None = None  # shape (n_frames, n_stations)
+
+    @property
+    def frame_pressure_head_m(self) -> np.ndarray | None:
+        """p = H - z per frame and station: the same float operation as the envelopes."""
+        if self.frame_head_m is None:
+            return None
+        return self.frame_head_m - self.mesh.station_elevation_m
 
     @property
     def duration_s(self) -> float:
@@ -194,8 +204,13 @@ def simulate(
     n_steps: int,
     observer: StepObserver | None = None,
     pressure_limit_m: float | None = None,
+    frame_steps: np.ndarray | None = None,
 ) -> MocResult:
     """Run the MOC from the steady state for ``n_steps`` time steps.
+
+    ``frame_steps``, if given, is a strictly increasing array of step indices in
+    ``[0, n_steps]`` (see ``_frames.plan_frames``); the station heads of those steps are
+    copied into ``MocResult.frame_head_m``, one row per frame (U-10, U-11).
 
     ``observer(k, H, Q)``, if given, is called for k = 0 .. n_steps with the node
     arrays of step k. The arrays are reused buffers: copy them to keep them.
@@ -263,6 +278,19 @@ def simulate(
     if observer is not None:
         observer(0, head, flow)
 
+    # Frames: rows are filled in order; next_frame_step is the step of the next empty row
+    # (-1 once all rows are filled).
+    frames: np.ndarray | None = None
+    next_frame = 0
+    next_frame_step = -1
+    if frame_steps is not None:
+        frames = np.empty((frame_steps.size, n_stations))
+        next_frame_step = int(frame_steps[0])
+        if next_frame_step == 0:
+            frames[0] = head_initial
+            next_frame = 1
+            next_frame_step = int(frame_steps[1]) if frame_steps.size > 1 else -1
+
     new_head = np.empty(n + 1)
     new_flow = np.empty(n + 1)
     two_b = 2.0 * b
@@ -307,12 +335,22 @@ def simulate(
                 if pressure_limit_m is not None and first_step is None:
                     look_for_crossing(k, st_p)
 
+        if k == next_frame_step:
+            assert frames is not None and frame_steps is not None
+            frames[next_frame] = st_head  # copies: st_head may be the reused node buffer
+            next_frame += 1
+            next_frame_step = int(frame_steps[next_frame]) if next_frame < frame_steps.size else -1
+
         head_valve[k] = head[n]
         head_mid[k] = head[mid]
         flow_res[k] = flow[0]
         flow_valve[k] = flow[n]
         if observer is not None:
             observer(k, head, flow)
+
+    if frames is not None and next_frame != frames.shape[0]:
+        raise ValueError(f"frame steps outside [0, {n_steps}]: filled {next_frame} of "
+                         f"{frames.shape[0]} frames")
 
     return MocResult(
         mesh=mesh,
@@ -335,4 +373,6 @@ def simulate(
         first_below_step=first_step,
         first_below_station=first_station,
         first_below_pressure_m=first_pressure,
+        frame_steps=frame_steps,
+        frame_head_m=frames,
     )

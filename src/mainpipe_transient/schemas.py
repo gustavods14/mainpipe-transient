@@ -671,7 +671,10 @@ class SolveResponse(BaseModel):
         "last interval may be shorter." + _NULL_WITHOUT_FRAMES,
     )
     frame_time_s: list[float] | None = Field(
-        ..., description="Frame instants (s), each one a value of time_s." + _NULL_WITHOUT_FRAMES
+        ...,
+        description="Frame instants (s), each one a value of time_s; the first is 0 and the "
+        "last is duration_s. At most min(1001, floor(50000 / len(x_m))) frames."
+        + _NULL_WITHOUT_FRAMES,
     )
     frame_x_m: list[float] | None = Field(
         ..., description="Identical to x_m (m)." + _NULL_WITHOUT_FRAMES

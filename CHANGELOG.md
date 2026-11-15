@@ -89,3 +89,20 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   presión igual al límite no es cruce (F4-03). F4-01 (redondeo a 1 decimal de U-26 cerca del
   umbral: «-10.0 por debajo de -10.0», «100.0 %» sin superar el PN) aceptado por el dueño.
   Test del mismo empate en el mínimo global (F4-04).
+
+### Fase 5 — serie para el reproductor
+
+- Fotogramas `frame_time_s`, `frame_x_m` (= `x_m`), `frame_head_m` y `frame_pressure_head_m`
+  (`[k][j]`, U-11) y `frame_stride`, acumulados dentro del bucle MOC sin guardar la historia
+  completa (U-19). Tope U-10 / D-57 (4): como mucho min(1001, ⌊50 000 / n_progresivas⌋)
+  fotogramas; sin submuestreo si caben todos los pasos, si no paso s = ⌈n_steps / (tope − 2)⌉ y
+  siempre el último paso. Valores sin redondear (D-57 (9)); p/γ = H − z con la misma operación
+  que las envolventes. Sin `frame_flow_lps` (U-33).
+- `include_frames: false` deja `frame_*` y `frame_stride` en `null` (U-24); el resto de la
+  respuesta es idéntico con y sin fotogramas.
+- `tools/measure_payload.py` (fuera del paquete): protocolo de U-34. Peor respuesta medida
+  3 167 900 B ≤ 3 500 000 B; peor petición 19 919 B ≤ 65 536 B; caso del Excel 355 716 B con
+  fotogramas y 48 149 B sin ellos. No se aplica la regla de ajuste de U-34. Cifras y receta en
+  `doc/DECISIONS.md` (U-34); tiempo del peor caso con fotogramas, mediana 0.147 s (U-38, V-16).
+- Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`); solo se amplía la
+  `description` de `frame_time_s` con el tope.

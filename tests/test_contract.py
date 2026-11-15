@@ -122,12 +122,14 @@ def test_min_allowed_pressure_echo():
     assert solve(case(min_allowed_pressure_head_m=-7.0))["min_allowed_pressure_head_m"] == -7.0
 
 
-def test_frames_are_null_until_phase_5():
-    for flag in (True, False):
-        out = solve(case(include_frames=flag))
-        for key in ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m",
-                    "frame_pressure_head_m"):
-            assert out[key] is None
+def test_include_frames_toggles_the_frame_fields():
+    """U-24: frame_* null only with include_frames = false (phase 5 fills them)."""
+    keys = ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m", "frame_pressure_head_m")
+    with_frames = solve(case())
+    without = solve(case(include_frames=False))
+    for key in keys:
+        assert with_frames[key] is not None, key
+        assert without[key] is None, key
 
 
 # --------------------------------------------------------------------------- F1-02

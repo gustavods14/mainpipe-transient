@@ -1,7 +1,7 @@
 """Orchestration of :func:`solve` and the error wrapper (plan 01 §1.1, kit 01 §3, kit 02 §1).
 
-Plan phases 2-4: horizontal and profile geometry, checks and status. Still pending by
-plan phase: the player frames (phase 5; ``frame_*`` are null until then).
+Plan phases 2-5: horizontal and profile geometry, checks and status, and the player
+frames (U-10, U-24).
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from ._checks import build_checks, status_of
 from ._closure import build_closure_law
+from ._frames import plan_frames
 from ._geometry import (
     Mesh,
     build_horizontal_mesh,
@@ -21,7 +22,7 @@ from ._geometry import (
     count_steps,
     default_duration_s,
 )
-from ._moc import PipeData, simulate
+from ._moc import MocResult, PipeData, simulate
 from ._theory import theory
 from .exceptions import (
     MainpipeTransientComputationError,
@@ -89,12 +90,15 @@ def _compute(req: SolveRequest) -> SolveResponse:
         reservoir_level_m=req.reservoir_level_m,
         gravity_ms2=req.gravity_ms2,
     )
+    n_steps = count_steps(duration, mesh.dt_s)
+    frames = plan_frames(n_steps, mesh.station_x_m.size) if req.include_frames else None
     res = simulate(
         pipe,
         mesh,
         law,
-        count_steps(duration, mesh.dt_s),
+        n_steps,
         pressure_limit_m=req.min_allowed_pressure_head_m,
+        frame_steps=None if frames is None else frames.steps,
     )
     der = res.derived
 
@@ -179,12 +183,7 @@ def _compute(req: SolveRequest) -> SolveResponse:
         theoretical_head_rise_m=th.theoretical_head_rise_m,
         moc_head_rise_valve_m=th.moc_head_rise_valve_m,
         theory_deviation_pct=th.theory_deviation_pct,
-        # plan phase 5
-        frame_stride=None,
-        frame_time_s=None,
-        frame_x_m=None,
-        frame_head_m=None,
-        frame_pressure_head_m=None,
+        **_frame_fields(res, None if frames is None else frames.stride),
     )
 
 
@@ -194,6 +193,23 @@ def _build_mesh(req: SolveRequest) -> Mesh:
         return build_profile_mesh(req.profile_x_m, req.profile_z_m, req.n_reaches, req.wave_speed_ms)
     assert req.length_m is not None and req.pipe_elevation_m is not None
     return build_horizontal_mesh(req.length_m, req.n_reaches, req.wave_speed_ms, req.pipe_elevation_m)
+
+
+def _frame_fields(res: MocResult, stride: int | None) -> dict[str, Any]:
+    """Player series (plan 01 §1.4, U-10, U-11); all null without frames (U-24)."""
+    if stride is None or res.frame_steps is None or res.frame_head_m is None:
+        return dict.fromkeys(
+            ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m", "frame_pressure_head_m")
+        )
+    pressure = res.frame_pressure_head_m
+    assert pressure is not None
+    return {
+        "frame_stride": stride,
+        "frame_time_s": _floats(res.time_s[res.frame_steps]),
+        "frame_x_m": _floats(res.mesh.station_x_m),
+        "frame_head_m": res.frame_head_m.tolist(),
+        "frame_pressure_head_m": pressure.tolist(),
+    }
 
 
 def _floats(values: np.ndarray) -> list[float]:
