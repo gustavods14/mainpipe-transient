@@ -121,3 +121,63 @@ envoltorio de `solve` no deje salir ese texto como si fuera un mensaje de valida
 ## Veredicto
 
 **No pasa**: el criterio de «hecho» (V-01 … V-09, V-14 y V-15, con sus tolerancias) se cumple, medido desde un venv limpio y contra una transcripción independiente, pero queda abierto el mayor F1-01: la fase declara cubrir HU-1.7 (1–4) y esa historia no existe. Basta con corregir el documento, sin tocar `src/` ni `tests/`.
+
+---
+
+## Reverificación — 2026-11-14
+
+| | |
+|---|---|
+| Commit verificado | `a870561e3c81334fbfd478fc0963f74c1bedb633` (rama `hie/etapas-0-3`, árbol limpio) |
+| Plan | `doc/plans/01-golpe-ariete-v1.md`, estado **congelado** (sin cambios desde `9d1d9b4`) |
+| Kit | `KIT_VERSION = 3.0.0`; `portal/HANDOFF.md` dice 3.0.0, así que coinciden |
+| Verificador | `hie-verifier` |
+| Alcance del commit `[medido]` (`git show --stat a870561`) | `doc/stories/01-transitorio-cierre-valvula.md` (+HU-1.7), `portal/HANDOFF.md` (nota de G1), `tests/test_moc_core.py` (+3 tests, V-03). **No toca `src/`**, así que lo medido sobre el núcleo en la verificación anterior sigue valiendo |
+
+### Suite
+
+`[medido]` `.venv\Scripts\python -m pytest -rN` (Python 3.12.10, instalación editable): **49 passed in
+0.46s** (46 anteriores + `test_hu17_crit1_crit2_mesh[20, 40]` + `test_hu17_crit4_effective_duration`).
+`git status` sigue limpio después de cada ejecución. No repetí la instalación en un venv limpio, porque
+el commit no cambia `src/` ni `pyproject.toml`.
+
+### HU-1.7 crit. 1–4 frente a la fase 1
+
+El texto existe ahora (`doc/stories/01-transitorio-cierre-valvula.md:201-251`). El crit. 5 es de la
+fase 2 (plan §5, fila 2) y no lo verifiqué.
+
+| Crit. | Qué pide | Test / código | Resultado | Evidencia |
+|---|---|---|---|---|
+| 1 | N = 20: dx = 50, dt = 0.05, 21 progresivas de 0 a 1000 cada 50, la última = 1000 exacta. N = 40: 25, 0.025, 41. La respuesta devuelve el `n_reaches` usado; si falta, 20 | `test_hu17_crit1_crit2_mesh`; `_geometry.py:37-47` | cumple en el núcleo. La parte de contrato queda para la fase 2 (F1-05) | `[medido]` en verde con igualdad exacta de `dx_m`, `dt_s` y `x_m[-1]`. `[leído]` el valor por defecto 20 solo existe en el arnés (`tests/moc_cases.py:32`) y en la tabla del plan §1 (`:192`). En `src/` todavía no hay `SolveRequest` ni respuesta |
+| 2 | x = L/2 es el nodo N/2; `head_midpoint_m` es la altura de ese nodo, sin interpolar; Joukowsky 244.21 ± 0.01 con N = 20 y con N = 40 | `test_hu17_crit1_crit2_mesh` (igualdad exacta con la columna N/2 de la historia registrada); `test_v04_…[20, 40]` | cumple | `[medido]` en verde. En la verificación anterior medí 244.211071 m con N = 20 y con N = 40 |
+| 3 | Sin `duration_s`: T = 21.5 s, `n_steps` = 430; no se recorta para caber en el tope | `test_default_duration_and_step_count`; `_geometry.py:56-58` | cumple en el núcleo. «No se recorta → 422» es de la fase 2 (F1-05) | `[medido]` `run(EXCEL.with_(duration_s=None))` da 430 pasos y 21.5 s. `[leído]` `default_duration_s` no aplica ningún tope |
+| 4 | `n_steps` = ⌈T/Δt − 10⁻⁹⌉; duración devuelta = `n_steps`·Δt; 20 → 400 y 20 s; 20.01 → 401 y 20.05 s | `test_hu17_crit4_effective_duration`; `_geometry.py:50-53`; `_moc.py:104-107` | cumple. La tolerancia no se ejerce (F1-04) | `[medido]` en verde. Mutante con `round(T/dt)`: el test falla. Mutante **sin** la tolerancia (`ceil(T/dt)`): **las 49 pruebas pasan** (F1-04) |
+
+### Estado de los hallazgos anteriores
+
+| ID | Estado | Evidencia |
+|---|---|---|
+| F1-01 (mayor) | **cerrado** | `[medido]` `grep -n "^## " doc/stories/01-transitorio-cierre-valvula.md` → `201:## HU-1.7`. G1 se reaprobó (`portal/HANDOFF.md`, nota del 2026-11-14). Los crit. 1–4 tienen test y se cumplen (tabla de arriba) |
+| F1-02 (menor) | **abierto, pasa a la fase 2** | `[leído]` sin cambios en `src/`: las conversiones mm → m y L/s ↔ m³/s siguen solo en el arnés. La fase 2 tiene que repetir V-05 a través de `solve()` con las entradas en mm y L/s |
+| F1-03 (menor) | **cerrado** | `[leído]` `tests/test_moc_core.py:79-85`: la referencia de Allievi interpola la ley con `np.interp` sobre los datos crudos del caso y ya no llama a `build_closure_law` ni a `flow_at`. `[medido]` con un plugin externo al repositorio (`-p mutclosure`, en el directorio temporal) que altera `ClosureLaw.flow_at` del paquete, V-03 **falla en los dos casos** (ley del Excel y ley lineal de 3 s), tanto con un retraso de 0.01 s en la ley como con la pendiente un 1 % mayor. Sin la mutación, pasa. Ahora la prueba sí es independiente de la ley. Nota: `np.interp` usa el primer punto de la tabla tal cual en lugar de Q₀ (U-18). Es equivalente aquí, porque en los dos casos Q[0] = Q₀ = 100 L/s |
+
+### Hallazgos nuevos
+
+| ID | Severidad | Archivo:línea | Qué está mal | Evidencia |
+|---|---|---|---|---|
+| F1-04 | menor | `src/mainpipe_transient/_geometry.py:16`; `tests/test_moc_core.py:335`; `doc/DECISIONS.md:20` (U-08) | **La tolerancia 10⁻⁹ de U-08 / HU-1.7 crit. 4 no la ejerce ninguna prueba**, y su justificación escrita es falsa: en IEEE-754, 20/0.05 da exactamente `400.0`, no «400.000…1». Quitar la tolerancia no hace fallar nada. El código es correcto, pero un defecto en esa rama pasaría inadvertido. La tolerancia sí importa en casos reales dentro de los rangos: en el caso del Excel con N = 26 y T = 1.0 s, T/Δt = `26.000000000000004`, y sin la tolerancia saldrían 27 pasos en vez de 26. Comprobación: con `ceil(T/dt)` sin tolerancia, alguna prueba tiene que fallar | `[medido]` `python -c "print(repr(20/0.05))"` → `400.0`. Mutante `ceil(T/dt)` (plugin `-p mutsteps`) → `49 passed`. Barrido con L = a = 1000, N par de 10 a 200, T = k·Δt redondeado a 10⁻⁶: hay casos donde la tolerancia cambia `n_steps`. El paquete con N = 26 y T = 1.0 da `n_steps` = 26 (correcto) |
+| F1-05 | menor | `doc/plans/01-golpe-ariete-v1.md:487-488` (fases 1 y 2); `doc/stories/01-transitorio-cierre-valvula.md` HU-1.7 crit. 1 y 3 | El plan asigna HU-1.7 (1–4) a la fase 1, pero parte de esos criterios solo se pueden comprobar en el contrato: el valor por defecto `n_reaches` = 20 cuando la entrada no lo trae, que la respuesta devuelva `n_reaches`, `n_steps` y `duration_s` (crit. 1, 3 y 4), y que la duración por defecto no se recorte sino que dé el 422 (crit. 3). La fila de la fase 2 solo lista «1.7 (5)», así que esas partes pueden quedar sin prueba. Comprobación en la fase 2: tiene que haber un test por `solve()` para cada una de esas partes | `[leído]` el valor por defecto 20 solo está en `tests/moc_cases.py:32`; `src/` no tiene esquemas todavía |
+
+Sin hallazgos bloqueantes ni mayores abiertos.
+
+### Lo que no comprobé en la reverificación
+
+- HU-1.7 crit. 5 (tiempo < 1 s con N = 200 y 10 000 pasos): es de la fase 2.
+- Las partes de contrato de HU-1.7 crit. 1, 3 y 4 (F1-05): son de la fase 2.
+- No repetí el venv limpio ni la transcripción independiente de M1–M12: `src/` no cambió desde `9d1d9b4`, y
+  esas medidas siguen siendo las de arriba.
+- Ejecución en Linux/macOS e instalación por `git+…@a870561`: no las hice (el commit no está empujado).
+
+### Veredicto de la reverificación
+
+**Pasa**: el criterio de «hecho» de la fase 1 se cumple (49 pruebas en verde), F1-01 y F1-03 están cerrados, y HU-1.7 crit. 1–4 tiene sus pruebas en verde en lo que toca al núcleo. Quedan abiertos tres menores: F1-02 y F1-05 pasan a la fase 2, y F1-04 es una tolerancia que ninguna prueba ejerce.

@@ -65,4 +65,8 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   alcance y G1 se aprueba de nuevo con ella: el dueño acepta el crit. 4 (`duration_s` devuelta =
   duración efectiva, 20.01 → 20.05 s) y que el crit. 5 (< 1 s con N = 200 y 10 000 pasos) se
   mide en la fase 2. Tests de HU-1.7 crit. 1, 2 y 4 añadidos y F1-03 corregido (referencia de
-  Allievi con interpolación propia). F1-02 pasa a la fase 2. Pendiente: reverificar la fase 1.
+  Allievi con interpolación propia). F1-02 pasa a la fase 2.
+- 2026-11-14: reverificación de la fase 1 sobre `a870561`: **pasa** (F1-01 y F1-03 cerrados).
+  Pasan a la fase 2: F1-02 (V-05 vía `solve()`), F1-04 (ningún test ejerce la tolerancia 10⁻⁹
+  de U-08; corregir el comentario «400.000…1») y F1-05 (n_reaches por defecto, eco en la
+  respuesta y 422 de la duración por defecto, probados a través de `solve()`).
