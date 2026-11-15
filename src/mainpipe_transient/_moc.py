@@ -117,13 +117,6 @@ class MocResult:
     frame_head_m: np.ndarray | None = None  # shape (n_frames, n_stations)
 
     @property
-    def frame_pressure_head_m(self) -> np.ndarray | None:
-        """p = H - z per frame and station: the same float operation as the envelopes."""
-        if self.frame_head_m is None:
-            return None
-        return self.frame_head_m - self.mesh.station_elevation_m
-
-    @property
     def duration_s(self) -> float:
         """Effective duration n_steps * dt (U-08)."""
         return self.n_steps * self.mesh.dt_s

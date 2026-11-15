@@ -1,7 +1,8 @@
 """Orchestration of :func:`solve` and the error wrapper (plan 01 §1.1, kit 01 §3, kit 02 §1).
 
 Plan phases 2-5: horizontal and profile geometry, checks and status, and the player
-frames (U-10, U-24).
+frames (U-10, U-24). Contract 2.0: rho and g are constants (U-40) and the m / m.c.a. / L/s
+output lists are rounded once, here, when the response is built (U-39, D-63).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pydantic import ValidationError
 
 from ._checks import build_checks, status_of
 from ._closure import build_closure_law
+from ._constants import DENSITY_KGM3, GRAVITY_MS2
 from ._frames import plan_frames
 from ._geometry import (
     Mesh,
@@ -88,7 +90,7 @@ def _compute(req: SolveRequest) -> SolveResponse:
         friction_factor=req.darcy_friction_factor,
         initial_flow_m3s=q0,
         reservoir_level_m=req.reservoir_level_m,
-        gravity_ms2=req.gravity_ms2,
+        gravity_ms2=GRAVITY_MS2,
     )
     n_steps = count_steps(duration, mesh.dt_s)
     frames = plan_frames(n_steps, mesh.station_x_m.size) if req.include_frames else None
@@ -106,12 +108,12 @@ def _compute(req: SolveRequest) -> SolveResponse:
     h_vmin, t_vmin = res.head_valve_min()
     p_max = res.pressure_head_max_global()
     p_min = res.pressure_head_min_global()
-    pn_head = req.pn_bar * 1e5 / (req.density_kgm3 * req.gravity_ms2)
+    pn_head = req.pn_bar * 1e5 / (DENSITY_KGM3 * GRAVITY_MS2)  # M18, U-40
     pn_ratio_pct = 100.0 * p_max.value_m / pn_head
     th = theory(
         length_m=mesh.length_m,
         wave_speed_ms=req.wave_speed_ms,
-        gravity_ms2=req.gravity_ms2,
+        gravity_ms2=GRAVITY_MS2,
         velocity_initial_ms=der.velocity_initial_ms,
         closure_duration_s=tc,
         head_valve_initial_m=float(res.head_valve_m[0]),
@@ -148,21 +150,21 @@ def _compute(req: SolveRequest) -> SolveResponse:
         closure_duration_s=tc,
         friction_number=der.friction_number,
         time_s=_floats(res.time_s),
-        head_valve_m=_floats(res.head_valve_m),
-        head_midpoint_m=_floats(res.head_midpoint_m),
-        pressure_head_valve_m=_floats(res.pressure_head_valve_m),
-        pressure_head_midpoint_m=_floats(res.pressure_head_midpoint_m),
-        flow_reservoir_lps=_floats(_LPS_PER_M3S * res.flow_reservoir_m3s),
-        flow_valve_lps=_floats(_LPS_PER_M3S * res.flow_valve_m3s),
-        x_m=_floats(mesh.station_x_m),
+        head_valve_m=_rounded(res.head_valve_m),
+        head_midpoint_m=_rounded(res.head_midpoint_m),
+        pressure_head_valve_m=_rounded(res.pressure_head_valve_m),
+        pressure_head_midpoint_m=_rounded(res.pressure_head_midpoint_m),
+        flow_reservoir_lps=_rounded(_LPS_PER_M3S * res.flow_reservoir_m3s),
+        flow_valve_lps=_rounded(_LPS_PER_M3S * res.flow_valve_m3s),
+        x_m=_rounded(mesh.station_x_m),
         x_is_node=mesh.station_is_node.tolist(),
-        elevation_m=_floats(mesh.station_elevation_m),
-        head_initial_m=_floats(res.head_initial_m),
-        pressure_head_initial_m=_floats(res.pressure_head_initial_m),
-        head_max_m=_floats(res.head_max_m),
-        head_min_m=_floats(res.head_min_m),
-        pressure_head_max_m=_floats(res.pressure_head_max_m),
-        pressure_head_min_m=_floats(res.pressure_head_min_m),
+        elevation_m=_rounded(mesh.station_elevation_m),
+        head_initial_m=_rounded(res.head_initial_m),
+        pressure_head_initial_m=_rounded(res.pressure_head_initial_m),
+        head_max_m=_rounded(res.head_max_m),
+        head_min_m=_rounded(res.head_min_m),
+        pressure_head_max_m=_rounded(res.pressure_head_max_m),
+        pressure_head_min_m=_rounded(res.pressure_head_min_m),
         head_valve_max_m=h_vmax,
         head_valve_max_time_s=t_vmax,
         head_valve_min_m=h_vmin,
@@ -198,22 +200,33 @@ def _build_mesh(req: SolveRequest) -> Mesh:
 def _frame_fields(res: MocResult, stride: int | None) -> dict[str, Any]:
     """Player series (plan 01 §1.4, U-10, U-11); all null without frames (U-24)."""
     if stride is None or res.frame_steps is None or res.frame_head_m is None:
-        return dict.fromkeys(
-            ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m", "frame_pressure_head_m")
-        )
-    pressure = res.frame_pressure_head_m
-    assert pressure is not None
+        return dict.fromkeys(("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m"))
+    # No frame_pressure_head_m since 2.0 (D-64): p = frame_head_m[k][j] - elevation_m[j].
     return {
         "frame_stride": stride,
         "frame_time_s": _floats(res.time_s[res.frame_steps]),
-        "frame_x_m": _floats(res.mesh.station_x_m),
-        "frame_head_m": res.frame_head_m.tolist(),
-        "frame_pressure_head_m": pressure.tolist(),
+        "frame_x_m": _rounded(res.mesh.station_x_m),
+        "frame_head_m": [_rounded(row) for row in res.frame_head_m],
     }
 
 
 def _floats(values: np.ndarray) -> list[float]:
+    """Full-precision list: time_s and frame_time_s are never rounded (U-39 (2))."""
     return values.astype(float).tolist()
+
+
+_OUTPUT_DECIMALS = 3  # U-39 (1), D-63 (1)
+
+
+def _rounded(values: np.ndarray) -> list[float]:
+    """The single rounding of every m / m.c.a. / L/s output list (U-39 (3)-(5), D-63 (1)-(2)).
+
+    Python's ``round(x, 3)`` gives the correctly rounded nearest decimal (ties to even) and
+    leaves huge magnitudes untouched without overflowing, unlike ``numpy.round`` (U-39 (4));
+    adding ``0.0`` turns ``-0.0`` into ``0.0``. Always applied to full-precision values,
+    never to lists that are already rounded (U-39 (5)).
+    """
+    return [round(v, _OUTPUT_DECIMALS) + 0.0 for v in values.astype(float).tolist()]
 
 
 # ------------------------------------------------------------------ validation messages

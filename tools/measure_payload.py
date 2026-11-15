@@ -1,6 +1,7 @@
 """Measure request and response sizes of ``mainpipe_transient.solve`` (plan 01 V-18, U-34).
 
-Protocol U-34 (doc/DECISIONS.md):
+Contract 2.0 (D-63, D-64, D-65): one frame matrix (``frame_head_m``), the m / m.c.a. / L/s
+lists at 3 decimals. Protocol U-34 (doc/DECISIONS.md), as amended by D-65 (3)-(5):
 
 1. Units: 3.5 MB = 3 500 000 B (10^6, the strictest reading of D-57 (1)); 64 KiB = 65 536 B.
 2. Response serialisations, the larger one counts:
@@ -14,6 +15,14 @@ Protocol U-34 (doc/DECISIONS.md):
    duration 56.113 s -> 10 000 steps, 20-point law with Tc = 50 s, frames on), and the
    input that maximises the count of numbers in an analytic sweep of the station count
    over [202, 699]. The larger one counts.
+3b. Adversarial input of magnitude (D-65 (3)): the deterministic recipe
+   :func:`adversarial_recipe`, admitted but without physical sense, with H, z, x, Q and t of
+   the order of 1e150 written with 17 significant digits (f = 0, so phi = 0 and nothing
+   overflows), 699 stations and 10 000 steps: the 3-decimal rounding cannot shorten any of
+   those numbers. It must average >= 20 B per number. Plus the analytic bound of U-34 (3b):
+   (largest admitted count of numbers) x 25 B + structure.
+   Both responses (3) and (3b) must be <= 3 500 000 B; if either is not, phase 5 stops and a
+   decision request is opened (U-34 (6), D-65): the frame budget is not touched here.
 4. Worst request: the recipe with every number written with 17 significant digits.
 5. Also the Excel case, with and without frames.
 
@@ -43,6 +52,8 @@ from mainpipe_transient import SolveResponse, solve
 from mainpipe_transient._frames import plan_frames
 
 RESPONSE_LIMIT_B = 3_500_000  # D-57 (1), U-34 (1)
+MAX_NUMBER_B = 25  # longest float repr (24 chars, e.g. -1.2345678901234567e+150) + separator
+MIN_ADVERSARIAL_B_PER_NUMBER = 20.0  # D-65 (3)
 REQUEST_LIMIT_B = 65_536  # D-57 (10), D-48, U-34 (1)
 
 N_REACHES = 200
@@ -104,6 +115,47 @@ def case_with_stations(n_stations: int) -> dict[str, Any]:
     return _base(x)
 
 
+def adversarial_recipe() -> dict[str, Any]:
+    """U-34 (3b) deterministic adversarial input of magnitude (D-65 (3)).
+
+    Same layout as :func:`worst_case_recipe` (N = 200, 500 vertices at x_j = L*j/499, so 699
+    stations) scaled to L ~ 1.23e150 m, with a reservoir level, elevations, flows and closure
+    instants of the order of 1e150 (1e148 for the instants) and 17 significant digits. The flow
+    is chosen so that the Joukowsky rise a*V0/g is itself ~1e150 m: heads, pressures and flows
+    keep all their digits through the MOC. f = 0 (phi = 0, no V0^2 term). Duration 9999.5*dt ->
+    exactly 10 000 steps; Tc = 0.9599*9599*dt keeps T >= Tc + 2L/a and few closed-valve zeros.
+    """
+    length = 1.2345678901234567e150
+    x = [length * j / (N_VERTICES - 1) for j in range(N_VERTICES)]
+    x[-1] = length
+    level = 3.1415926535897932e150
+    z = [2.7182818284590452e150 * math.sin(math.pi * xi / length + 0.3) - 1.4142135623730951e150
+         * (xi / length) for xi in x]
+    a = 1234.5678901234567
+    dt = (length / N_REACHES) / a  # as the package computes it (U-08)
+    tc = 0.9599 * 9599.0 * dt
+    t = [0.0] + [tc * (i / 19) ** 1.3 for i in range(1, 20)]
+    q0 = 1.6180339887498949e151  # L/s -> V0 ~ 2e148 m/s with D = 1 m, a*V0/g ~ 2.6e150 m
+    flows = [q0 * (1.0 - (ti / tc) ** 0.7) for ti in t]
+    flows[-1] = 0.0
+    return {
+        "geometry": "profile",
+        "profile_x_m": x,
+        "profile_z_m": z,
+        "inner_diameter_mm": 1000.0,
+        "wave_speed_ms": a,
+        "darcy_friction_factor": 0.0,
+        "initial_flow_lps": q0,
+        "reservoir_level_m": level,
+        "pn_bar": 16.0,
+        "closure_time_s": t,
+        "closure_flow_lps": flows,
+        "n_reaches": N_REACHES,
+        "duration_s": 9999.5 * dt,
+        "include_frames": True,
+    }
+
+
 def excel_case(include_frames: bool) -> dict[str, Any]:
     return {
         "geometry": "horizontal", "length_m": 1000.0, "pipe_elevation_m": 0.0,
@@ -149,12 +201,40 @@ def request_size(data: dict[str, Any]) -> dict[str, int]:
 
 
 def number_count(n_steps: int, n_stations: int) -> int:
-    """Numbers (and booleans) in a response with frames, from the contract shape."""
+    """Numbers (and booleans) in the lists of a response with frames, from the 2.0 shape."""
     plan = plan_frames(n_steps, n_stations)
     series = len(SERIES_KEYS) * (n_steps + 1)
     stations = (len(STATION_FLOAT_KEYS) + 1) * n_stations  # + x_is_node
-    frames = 2 * plan.n_frames * n_stations + plan.n_frames + n_stations  # + time, x
+    frames = plan.n_frames * n_stations + plan.n_frames + n_stations  # frame_head_m + time, x
     return series + stations + frames
+
+
+def leaves(value: Any) -> list[Any]:
+    """Every number and boolean of a JSON value (lists, scalars and inside ``checks``)."""
+    if isinstance(value, dict):
+        return [leaf for v in value.values() for leaf in leaves(v)]
+    if isinstance(value, list):
+        return [leaf for v in value for leaf in leaves(v)]
+    return [value] if isinstance(value, (bool, int, float)) else []
+
+
+def analytic_bound(out: dict[str, Any], max_steps: int = 10_000) -> dict[str, int]:
+    """U-34 (3b): (largest admitted count of numbers) x 25 B + structure.
+
+    The structure (keys, brackets, separators, strings, nulls) is measured on ``out``; the
+    numbers are its scalar leaves plus the largest list count over every admitted station
+    count (11 .. 699) with ``max_steps`` steps.
+    """
+    text = json.dumps(out, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+    all_leaves = leaves(out)
+    leaf_bytes = sum(len(json.dumps(v)) for v in all_leaves)
+    structure = len(text.encode("utf-8")) - leaf_bytes
+    list_count = number_count(out["n_steps"], len(out["x_m"]))
+    scalars = len(all_leaves) - list_count
+    max_lists = max(number_count(max_steps, n) for n in range(11, 700))
+    numbers = max_lists + scalars
+    return {"numbers": numbers, "structure_b": structure,
+            "bound_b": numbers * MAX_NUMBER_B + structure}
 
 
 def sweep(n_steps: int = 10_000, lo: int = 202, hi: int = 699) -> list[tuple[int, int]]:
@@ -211,6 +291,26 @@ def measure(top: int = 3, timing: bool = True) -> dict[str, Any]:
     report["sweep_top"] = candidates
 
     worst = max([report["recipe"], *candidates], key=lambda c: c["response_b"]["max"])
+    adv_in = adversarial_recipe()
+    adv = solve(adv_in)
+    adv_sizes = response_sizes(adv)
+    adv_leaves = len(leaves(adv))
+    report["adversarial"] = {
+        "n_stations": len(adv["x_m"]),
+        "n_steps": adv["n_steps"],
+        "n_frames": len(adv["frame_time_s"]),
+        "frame_stride": adv["frame_stride"],
+        "numbers": adv_leaves,
+        "response_b": adv_sizes,
+        "bytes_per_number": adv_sizes["max"] / adv_leaves,
+        "request_b": request_size(adv_in),
+        "fits": adv_sizes["max"] <= RESPONSE_LIMIT_B,
+        "valid_recipe": adv_sizes["max"] / adv_leaves >= MIN_ADVERSARIAL_B_PER_NUMBER,
+    }
+    bound = analytic_bound(adv)
+    report["analytic"] = bound
+    report["analytic_bound_b"] = bound["bound_b"]
+
     report["worst_response"] = {
         "source": "recipe" if worst is report["recipe"] else f"sweep n_stations={worst['n_stations']}",
         "bytes": worst["response_b"]["max"],
@@ -219,6 +319,10 @@ def measure(top: int = 3, timing: bool = True) -> dict[str, Any]:
             key=lambda k: worst["response_b"][k],
         ),
         "fits": worst["response_b"]["max"] <= RESPONSE_LIMIT_B,
+    }
+    report["worst_response_any"] = {
+        "bytes": max(report["worst_response"]["bytes"], adv_sizes["max"]),
+        "fits": report["worst_response"]["fits"] and report["adversarial"]["fits"],
     }
     req = report["recipe"]["request_b"]
     report["worst_request"] = {
@@ -259,6 +363,18 @@ def _print(report: dict[str, Any]) -> None:
     w = report["worst_response"]
     print(f"Worst response: {b(w['bytes'])} ({w['serialisation']}, {w['source']}) "
           f"vs {b(report['limits_b']['response'])}: {'OK' if w['fits'] else 'EXCEEDS'}")
+    a = report["adversarial"]
+    print(f"Adversarial U-34 (3b): {a['n_stations']} stations, {a['n_steps']} steps, "
+          f"{a['n_frames']} frames (stride {a['frame_stride']}), {a['numbers']} numbers")
+    for key, val in a["response_b"].items():
+        print(f"  response {key:26s} {b(val)}")
+    print(f"  bytes per number               {a['bytes_per_number']:.2f} B "
+          f"(>= {MIN_ADVERSARIAL_B_PER_NUMBER:.0f}: {'OK' if a['valid_recipe'] else 'NO'})")
+    print(f"Adversarial response: {b(a['response_b']['max'])} vs "
+          f"{b(report['limits_b']['response'])}: {'OK' if a['fits'] else 'EXCEEDS'}")
+    n = report["analytic"]
+    print(f"Analytic bound U-34 (3b): {n['numbers']} numbers x {MAX_NUMBER_B} B + "
+          f"{b(n['structure_b'])} structure = {b(n['bound_b'])}")
     q = report["worst_request"]
     print(f"Worst request:  {b(q['bytes'])} vs {b(report['limits_b']['request'])}: "
           f"{'OK' if q['fits'] else 'EXCEEDS'}")
@@ -278,7 +394,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report, indent=2, ensure_ascii=False))
     else:
         _print(report)
-    ok = report["worst_response"]["fits"] and report["worst_request"]["fits"]
+    ok = (report["worst_response_any"]["fits"] and report["worst_request"]["fits"]
+          and report["adversarial"]["valid_recipe"])
     return 0 if ok else 1
 
 

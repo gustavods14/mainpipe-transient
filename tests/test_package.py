@@ -38,7 +38,7 @@ def test_public_api():
 
 
 def test_schema_version_is_frozen_contract():
-    assert mpt.SCHEMA_VERSION == "1.0"
+    assert mpt.SCHEMA_VERSION == "2.0"
     assert isinstance(mpt.SCHEMA_VERSION, str)
 
 

@@ -5,7 +5,9 @@ contrato; `__version__`, la del código.
 
 ## [0.1.0] — sin publicar
 
-Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.md`, congelado en G4).
+Contrato objetivo: `SCHEMA_VERSION = "2.0"` (plan `doc/plans/01-golpe-ariete-v1.md`, congelado de nuevo
+en G4 el 2026-11-15 tras la enmienda; antes `"1.0"`). Las fases 0–4 se construyeron sobre la 1.0 y
+siguen valiendo; la fase 5 se rehizo con la 2.0 (abajo).
 
 ### Fase 0 — andamiaje y referencia
 
@@ -90,7 +92,7 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   umbral: «-10.0 por debajo de -10.0», «100.0 %» sin superar el PN) aceptado por el dueño.
   Test del mismo empate en el mínimo global (F4-04).
 
-### Fase 5 — serie para el reproductor
+### Fase 5 — serie para el reproductor (contrato 1.0, sustituida por la fase 5 rehecha)
 
 - Fotogramas `frame_time_s`, `frame_x_m` (= `x_m`), `frame_head_m` y `frame_pressure_head_m`
   (`[k][j]`, U-11) y `frame_stride`, acumulados dentro del bucle MOC sin guardar la historia
@@ -106,3 +108,35 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   `doc/DECISIONS.md` (U-34); tiempo del peor caso con fotogramas, mediana 0.147 s (U-38, V-16).
 - Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`); solo se amplía la
   `description` de `frame_time_s` con el tope.
+
+### Fase 5 rehecha — contrato 2.0 (enmienda del 2026-11-15; D-63 … D-66)
+
+Cambio de forma del contrato: **`SCHEMA_VERSION` = `"2.0"`** (subida mayor, U-15). Rompe con la 1.0
+en tres puntos:
+
+- **Entrada** (U-40): `density_kgm3` y `gravity_ms2` salen de `SolveRequest`; el cálculo usa
+  ρ = 1000 kg/m³ y g = 9.81 m/s², constantes privadas en `_constants.py`. Una petición que los
+  envíe recibe 422 con un mensaje propio en español por campo, desde un
+  `model_validator(mode="before")`, de modo que llega en español también a través de FastAPI;
+  cualquier otro campo desconocido sigue con el 422 genérico (U-23). Las `description` de
+  `pn_head_m`, `head_loss_m`, `joukowsky_head_rise_m` y `michaud_head_rise_m` citan las constantes.
+- **Precisión** (U-39, D-63 (1)-(2)): todas las listas en m, m.c.a. y L/s (seis series, ocho
+  columnas por progresiva, `frame_x_m` y `frame_head_m`) salen redondeadas a 3 decimales con una
+  única función privada (`_solve._rounded`: `round(x, 3)` de Python, sin `-0.0`), aplicada una sola
+  vez desde la precisión completa al construir la respuesta. `time_s`, `frame_time_s`, los
+  escalares y todos los campos de `checks` salen completos. El cálculo, las envolventes, los
+  extremos, el primer cruce y los `checks` no cambian.
+- **Serie** (D-64, D-65, U-42): se retira `frame_pressure_head_m`; la presión del fotograma k en la
+  progresiva j es `frame_head_m[k][j]` − `elevation_m[j]`. `frame_x_m` se mantiene, idéntico a
+  `x_m`. Tope de fotogramas min(1001, ⌊50 000 / n_progresivas⌋) sin cambios: el presupuesto pasa a
+  50 000 celdas en la única matriz (`FRAME_CELL_BUDGET`).
+- Pruebas: invariantes de D-64 (3) (V-17) en el caso del Excel, un perfil genérico y la receta
+  submuestreada; regla del rojo de D-63 (V-13) con cuatro casos construidos en la banda de
+  ±0.0005 m; precisión de la serialización (V-19, `tests/test_precision.py`), con el caso de
+  HU-4.2 crit. 4 (Δt = 1/3000 s). Las pruebas de las fases 1–4 que leían listas de `solve()` se
+  ajustan a la nota de tolerancias del plan §6; el caso del empate F4-02 se rehízo con g = 9.81.
+- `tools/measure_payload.py`: una sola matriz en el recuento y receta adversaria determinista de
+  U-34 (3b). Medido (D-65 (3)-(4)): receta realista 964 274 B, peor del barrido 965 887 B;
+  adversaria 2 819 475 B (22.37 B por número); cota analítica 3 285 874 B; petición 19 919 B; caso
+  del Excel 90 471 B con fotogramas y 24 039 B sin ellos. Todo ≤ 3 500 000 B (y ≤ 65 536 B la
+  petición): no se abre pedido (U-34 (6)). Peor caso con fotogramas, mediana 0.243 s (V-16).

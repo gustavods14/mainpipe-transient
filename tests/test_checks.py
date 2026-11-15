@@ -20,6 +20,7 @@ from mainpipe_transient._geometry import build_horizontal_mesh, build_profile_me
 from mainpipe_transient._moc import Extreme, PipeData, simulate
 
 from moc_cases import Recorder
+from rounding import r3, r3_list
 from test_profile import GENERIC_X, GENERIC_Z, LOMA_X, LOMA_Z, horizontal, profile
 
 REL = 1e-9  # U-29 for derived magnitudes against the Excel reference (V-11)
@@ -71,19 +72,19 @@ PROPERTY_CASES = [
 
 # F4-02: two valve heads one ulp apart give the same pressure head at steps 300 and 420;
 # U-25 asks for the first instant (t = 5.556 s, not 7.778 s). Data of the phase-4 report
-# with D, z and H_dep found by a sweep so that the heads differ while p = H - z ties.
+# with z and H_dep found by a sweep so that the heads differ while p = H - z ties. The 2.0
+# contract fixes g = 9.81 m/s2 (U-40); the 1.0 case used g = 9.78 and its tie vanished, so
+# z and H_dep were swept again (seeded sweep over H_dep in [120, 260] m, z in [-150, 60] m).
 TIE_CASE = horizontal(
     length_m=500.0,
     inner_diameter_mm=358.9,
-    pipe_elevation_m=41.93966602377428,
+    pipe_elevation_m=-135.20707463783273,
     darcy_friction_factor=0.0,
     wave_speed_ms=900.0,
     n_reaches=30,
     initial_flow_lps=40.0,
-    reservoir_level_m=204.14449155988194,
+    reservoir_level_m=255.84901546757607,
     pn_bar=6.0,
-    density_kgm3=1025.0,
-    gravity_ms2=9.78,
     closure_time_s=[0.0, 4.0, 8.0],
     closure_flow_lps=[40.0, 26.5256, 0.0],
     duration_s=14.6667,
@@ -113,7 +114,6 @@ MIN_TIE_CASE = profile(
     n_reaches=40,
     duration_s=5.8,
     min_allowed_pressure_head_m=-10.33,
-    density_kgm3=1025.0,
 )
 PROPERTY_CASES += [
     ("f4-02-tie", TIE_CASE),
@@ -124,6 +124,12 @@ PROPERTY_CASES += [
 
 def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """(time_s, x_m, p[k][j]) on every output station and step, via the internal API."""
+    time_s, x_m, _, pressure = station_history(data)
+    return time_s, x_m, pressure
+
+
+def station_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """(time_s, x_m, H[k][j], p[k][j]) at full precision, via the internal API."""
     if data["geometry"] == "profile":
         mesh = build_profile_mesh(
             data["profile_x_m"], data["profile_z_m"], data["n_reaches"], data["wave_speed_ms"]
@@ -142,12 +148,12 @@ def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.nda
         friction_factor=data["darcy_friction_factor"],
         initial_flow_m3s=q0,
         reservoir_level_m=data["reservoir_level_m"],
-        gravity_ms2=data.get("gravity_ms2", 9.81),
+        gravity_ms2=9.81,  # U-40
     )
     rec = Recorder()
     res = simulate(pipe, mesh, law, count_steps(data["duration_s"], mesh.dt_s), observer=rec)
-    pressure = np.array([mesh.station_head(h) for h in rec.head]) - mesh.station_elevation_m
-    return res.time_s, mesh.station_x_m, pressure
+    head = np.array([mesh.station_head(h) for h in rec.head])
+    return res.time_s, mesh.station_x_m, head, head - mesh.station_elevation_m
 
 
 # --------------------------------------------------------------------------- HU-3.1 / V-12
@@ -190,9 +196,10 @@ def test_hu31_crit4_exceeded_message_is_literal():
     assert c["first_pressure_head_m"] is None
 
 
-def test_v12_pn_with_other_density_and_gravity():
-    out = solve(horizontal(pn_bar=16.0, density_kgm3=1025.0, gravity_ms2=9.78))
-    assert out["pn_head_m"] == pytest.approx(16e5 / (1025.0 * 9.78), abs=0.01)
+def test_v12_pn_uses_the_fixed_density_and_gravity():
+    """2.0: rho = 1000 kg/m3 and g = 9.81 m/s2 are constants (U-40, V-12)."""
+    out = solve(horizontal(pn_bar=16.0))
+    assert out["pn_head_m"] == pytest.approx(16e5 / (1000.0 * 9.81), rel=1e-12)
     assert out["pressure_max_pn_ratio_pct"] == pytest.approx(
         100 * out["pressure_head_max_global_m"] / out["pn_head_m"], rel=1e-3
     )
@@ -307,7 +314,8 @@ def test_hu33_crit1_steady_negative_warning():
     c = check(out, "STEADY_NEGATIVE_PRESSURE")
     assert c["severity"] == "warning"
     assert (c["x_m"], c["time_s"], c["limit_m"]) == (300.0, 0.0, 0.0)
-    assert c["value_m"] == min(out["pressure_head_initial_m"])
+    # the list is at 3 decimals (U-39), the check value at full precision
+    assert r3(c["value_m"]) == min(out["pressure_head_initial_m"])
     # a small depression keeps its sign in the message
     assert "-0.0 m.c.a. en x = 300 m" in c["message"]
 
@@ -428,16 +436,135 @@ def test_hu35_crit4_messages_spanish_units_decimal_point(name, data):
 
 
 # --------------------------------------------------------------------------- V-13 / §1.5
-@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
-def test_v13_danger_iff_some_chainage_crosses(name, data):
-    """D-60 / U-36: the danger check exists if and only if the per-chainage predicate holds."""
-    out = solve(data)
-    pn_crossed = any(p > out["pn_head_m"] for p in out["pressure_head_max_m"])
-    limit_crossed = any(
-        p < out["min_allowed_pressure_head_m"] for p in out["pressure_head_min_m"]
+BAND = 0.0005 + 1e-9  # m: the only disagreement D-63 (4) admits (plan 01 §1.5 (3))
+
+
+def moc_result(data: dict):
+    """Full-precision run through the internal API (MocResult), no rounding."""
+    if data.get("geometry", "horizontal") == "profile":
+        mesh = build_profile_mesh(
+            data["profile_x_m"], data["profile_z_m"], data["n_reaches"], data["wave_speed_ms"]
+        )
+    else:
+        mesh = build_horizontal_mesh(
+            data["length_m"], data["n_reaches"], data["wave_speed_ms"], data["pipe_elevation_m"]
+        )
+    q0 = data["initial_flow_lps"] / 1000.0
+    law = build_closure_law(
+        data["closure_time_s"], [q / 1000.0 for q in data["closure_flow_lps"]], q0
     )
-    assert ("PN_EXCEEDED" in codes(out)) is pn_crossed
-    assert ("COLUMN_SEPARATION_RISK" in codes(out)) is limit_crossed
+    pipe = PipeData(data["inner_diameter_mm"] / 1000.0, data["wave_speed_ms"],
+                    data["darcy_friction_factor"], q0, data["reservoir_level_m"], 9.81)
+    return simulate(pipe, mesh, law, count_steps(data["duration_s"], mesh.dt_s))
+
+
+def assert_red_rule(out: dict, res) -> None:
+    """V-13 (U-36, D-63 (3)-(4)): (a) check <=> full-precision crossing; (b) check fields are
+    the full-precision global extreme; (c) STEADY error => COLUMN_SEPARATION_RISK; (d) every
+    disagreement between the rounded-list predicate and the check falls inside the band."""
+    pn, limit = out["pn_head_m"], out["min_allowed_pressure_head_m"]
+    sides = (
+        ("PN_EXCEEDED", "max", pn, res.pressure_max_m, np.greater, +1.0),
+        ("COLUMN_SEPARATION_RISK", "min", limit, res.pressure_min_m, np.less, -1.0),
+    )
+    for code, key, threshold, envelope, crosses, sign in sides:
+        extreme = out[f"pressure_head_{key}_global_m"]
+        present = code in codes(out)
+        # (a) exact, at full precision
+        assert present is bool(crosses(extreme, threshold))
+        assert present is bool(np.any(crosses(envelope, threshold)))
+        if present:
+            # (b) the marker fields are the full-precision global extreme (==, not rounded)
+            c = check(out, code)
+            assert c["value_m"] == extreme == (envelope.max() if key == "max" else envelope.min())
+            assert c["x_m"] == out[f"pressure_head_{key}_global_x_m"]
+            assert c["time_s"] == out[f"pressure_head_{key}_global_time_s"]
+            assert c["limit_m"] == threshold
+            assert r3(c["x_m"]) in out["x_m"]  # U-41 (2)
+            assert c["time_s"] in out["time_s"]
+        # (d) predicate on the rounded envelope versus the check
+        listed = bool(np.any(crosses(np.array(out[f"pressure_head_{key}_m"]), threshold)))
+        if listed and not present:
+            assert 0.0 <= sign * (threshold - extreme) < BAND
+        elif present and not listed:
+            assert 0.0 < sign * (extreme - threshold) <= BAND
+        if abs(extreme - threshold) > BAND:
+            assert listed is present  # outside the band the two agree exactly
+    # (c)
+    steady = [c for c in out["checks"] if c["code"] == "STEADY_NEGATIVE_PRESSURE"]
+    if steady and steady[0]["severity"] == "error":
+        assert "COLUMN_SEPARATION_RISK" in codes(out)
+
+
+def red_rule_cases() -> list[tuple[str, dict]]:
+    from test_profile import worst_case_profile
+
+    return PROPERTY_CASES + [("u34-recipe", worst_case_profile())]
+
+
+@pytest.mark.parametrize("name,data", red_rule_cases(), ids=[n for n, _ in red_rule_cases()])
+def test_v13_red_rule(name, data):
+    assert_red_rule(solve(data), moc_result(data))
+
+
+def test_v13_check_values_are_not_rounded():
+    """(b): at least one case where value_m != round(value_m, 3), so U-39 did not touch it."""
+    out = solve(horizontal())
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert c["value_m"] != round(c["value_m"], 3)
+    assert c["value_m"] == out["pressure_head_min_global_m"]
+
+
+def _band_case(kind: str, side: str) -> tuple[dict, dict]:
+    """A case with the threshold between the full-precision extreme P and r3(P) (V-13).
+
+    ``side`` = "check-without-span": P crosses, r3(P) does not (check and marker, no span);
+    "span-without-check": r3(P) crosses, P does not (a rounded j crosses, no check). The
+    reservoir level is nudged in tenths of a millimetre (the pressure heads shift with it)
+    until P - r3(P) has the wanted sign with some margin; the threshold is their midpoint.
+    """
+    if kind == "pn":
+        base, key = frictionless(), "max"  # p_max ~ 244.2 m, PN ~ 24 bar
+    else:
+        base, key = frictionless(reservoir_level_m=136.0), "min"  # p_min ~ -8.2 m
+    # PN: the check needs P > threshold; the span needs r3(P) > threshold. Limit: reversed.
+    want_p_above_r3 = (side == "check-without-span") == (kind == "pn")
+    for nudge in [k * 0.0001 for k in range(10)]:  # one full millimetre cycle
+        data = {**base, "reservoir_level_m": base["reservoir_level_m"] + nudge}
+        extreme = solve({**data, "include_frames": False})[f"pressure_head_{key}_global_m"]
+        gap = extreme - r3(extreme)
+        if abs(gap) >= 5e-5 and (gap > 0) == want_p_above_r3:
+            break
+    else:  # pragma: no cover - the nudges always find both signs
+        raise AssertionError("no band case found")
+    threshold = (extreme + r3(extreme)) / 2.0
+    if kind == "pn":
+        data["pn_bar"] = threshold * 1000.0 * 9.81 / 1e5
+    else:
+        data["min_allowed_pressure_head_m"] = threshold
+    return data, solve(data)
+
+
+@pytest.mark.parametrize("kind", ["pn", "limit"])
+@pytest.mark.parametrize("side", ["check-without-span", "span-without-check"])
+def test_v13_band_cases(kind, side):
+    """The four constructed cases of V-13: PN and limit x both sides of the band (D-63 (4))."""
+    data, out = _band_case(kind, side)
+    code = "PN_EXCEEDED" if kind == "pn" else "COLUMN_SEPARATION_RISK"
+    key = "max" if kind == "pn" else "min"
+    threshold = out["pn_head_m"] if kind == "pn" else out["min_allowed_pressure_head_m"]
+    if kind == "limit":
+        assert -10.33 <= threshold <= 0.0
+    extreme = out[f"pressure_head_{key}_global_m"]
+    assert 0.0 < abs(extreme - threshold) < BAND  # inside the band
+    rounded = np.array(out[f"pressure_head_{key}_m"])
+    listed = bool(np.any(rounded > threshold if kind == "pn" else rounded < threshold))
+    if side == "check-without-span":
+        assert code in codes(out) and not listed
+        assert check(out, code)["value_m"] == extreme  # the full-precision one
+    else:
+        assert code not in codes(out) and listed
+    assert_red_rule(out, moc_result(data))
 
 
 def test_v13_named_cases_have_expected_codes():
@@ -470,7 +597,7 @@ def test_check_shape_order_and_location(name, data):
     assert not {"PN_EXCEEDED", "PN_NEAR_LIMIT"} <= set(codes(out))
     assert not {"COLUMN_SEPARATION_RISK", "SUBATMOSPHERIC_PRESSURE"} <= set(codes(out))
     for c in out["checks"]:
-        assert c["x_m"] in out["x_m"] and c["time_s"] in out["time_s"]
+        assert r3(c["x_m"]) in out["x_m"] and c["time_s"] in out["time_s"]  # U-41 (2)
         has_first = c["code"] == "COLUMN_SEPARATION_RISK"
         for key in ("first_x_m", "first_time_s", "first_pressure_head_m"):
             assert (c[key] is not None) is has_first, (c["code"], key)
@@ -540,11 +667,13 @@ def test_fmt_pressure_keeps_the_sign(value, text):
 # --------------------------------------------------------------------------- F4-02 / F4-03
 def test_f402_pressure_extreme_tie_takes_the_first_instant():
     out = solve(TIE_CASE)
-    time_s, x_m, p = station_pressure_history(TIE_CASE)
+    time_s, x_m, h, p = station_history(TIE_CASE)
     j = out["x_m"].index(500.0)
     assert p[300, j] == p[420, j] == out["pressure_head_max_global_m"]
-    # a real tie of p only: the heads differ (the later one is higher by one ulp)
-    assert out["head_valve_m"][300] < out["head_valve_m"][420]
+    # a real tie of p only: the full-precision heads differ (the later one is higher by one
+    # ulp); the output lists, at 3 decimals (U-39), cannot show it
+    assert h[300, -1] < h[420, -1]
+    assert p[300, -1] == p[420, -1]
     assert out["pressure_head_valve_m"][300] == out["pressure_head_valve_m"][420]
     assert out["pressure_head_max_global_time_s"] == out["time_s"][300]
     c = check(out, "PN_EXCEEDED")
@@ -562,8 +691,9 @@ def test_f402_global_pressure_extremes_follow_u25(name, data):
         k, j = min(zip(*np.nonzero(p == value)), key=lambda kj: (kj[0], x_m[kj[1]]))
         assert out[f"pressure_head_{key}_global_time_s"] == time_s[k], name
         assert out[f"pressure_head_{key}_global_x_m"] == x_m[j], name
-    np.testing.assert_array_equal(out["pressure_head_max_m"], p.max(axis=0))
-    np.testing.assert_array_equal(out["pressure_head_min_m"], p.min(axis=0))
+    # envelopes: the same full-precision values, rounded once (U-39 (5)); exact
+    assert out["pressure_head_max_m"] == r3_list(p.max(axis=0))
+    assert out["pressure_head_min_m"] == r3_list(p.min(axis=0))
 
 
 def test_f404_minimum_pressure_tie_takes_the_first_instant():

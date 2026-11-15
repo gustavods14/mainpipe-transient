@@ -1,7 +1,9 @@
 """Phase 3: real pipe profile (plan 01 §5 phase 3, M13-M14, U-07, U-22; V-10).
 
-Covers HU-2.1 crit. 1-5, HU-2.2 crit. 1-3 and HU-2.3 crit. 1-5. Tolerance ± 1e-6 m
-(V-10); the loma check is the identity p_min(500) = p_min horizontal - 40.
+Covers HU-2.1 crit. 1-5, HU-2.2 crit. 1-3 and HU-2.3 crit. 1-5. Tolerance ± 1e-6 m on the
+internal arrays (V-10); through ``solve()`` the lists come at 3 decimals (U-39), so a
+difference of rounded lists is compared with 0.001 m + 1e-9 m and "same value" identities are
+exact (V-19). The loma check is the identity p_min(500) = p_min horizontal - 40.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from mainpipe_transient._geometry import (
 )
 from mainpipe_transient._moc import PipeData, simulate
 from moc_cases import Recorder
+from rounding import DIFF_TOL, r3
 
 TOL = 1e-6  # m (V-10)
 
@@ -106,13 +109,13 @@ def nodal_history(mesh, data: dict) -> tuple[np.ndarray, np.ndarray]:
 
 # --------------------------------------------------------------------------- HU-2.1
 def test_hu21_crit1_profile_does_not_change_head_and_flow():
-    """Through solve(): series and nodal H envelopes equal the horizontal case (± 1e-6)."""
+    """Through solve(): series and nodal H envelopes identical to the horizontal case (V-19)."""
     h = solve(horizontal())
     p = solve(profile(GENERIC_X, GENERIC_Z))
     for field in SERIES:
-        np.testing.assert_allclose(p[field], h[field], rtol=0, atol=TOL, err_msg=field)
+        assert p[field] == h[field], field
     for field in NODE_ENVELOPES:
-        np.testing.assert_allclose(node_values(p, field), h[field], rtol=0, atol=TOL, err_msg=field)
+        assert node_values(p, field).tolist() == h[field], field
 
 
 def test_hu21_crit1_full_nodal_history_is_identical():
@@ -132,7 +135,7 @@ def test_hu21_crit2_loma_elevation_and_pressure_identity():
     for p_field, h_field in (("pressure_head_min_m", "head_min_m"),
                              ("pressure_head_max_m", "head_max_m"),
                              ("pressure_head_initial_m", "head_initial_m")):
-        np.testing.assert_allclose(out[p_field], np.array(out[h_field]) - z, rtol=0, atol=TOL)
+        np.testing.assert_allclose(out[p_field], np.array(out[h_field]) - z, rtol=0, atol=DIFF_TOL)
 
 
 def test_hu21_crit3_two_point_flat_profile_equals_horizontal():
@@ -159,10 +162,11 @@ def test_hu21_crit5_midpoint_pressure_uses_profile_elevation():
     z_mid = 30.0 + (500.0 - 300.0) / 700.0 * (-70.0)  # = 10.0
     assert at(out, "elevation_m", 500.0) == pytest.approx(z_mid, abs=1e-12)
     np.testing.assert_allclose(
-        out["pressure_head_midpoint_m"], np.array(out["head_midpoint_m"]) - z_mid, rtol=0, atol=TOL
+        out["pressure_head_midpoint_m"], np.array(out["head_midpoint_m"]) - z_mid, rtol=0,
+        atol=DIFF_TOL,
     )
     np.testing.assert_allclose(
-        out["pressure_head_valve_m"], np.array(out["head_valve_m"]) + 40.0, rtol=0, atol=TOL
+        out["pressure_head_valve_m"], np.array(out["head_valve_m"]) + 40.0, rtol=0, atol=DIFF_TOL
     )
 
 
@@ -213,14 +217,15 @@ def test_hu22_crit2_global_extremes_and_aligned_columns(x, z):
         assert len(out[field]) == n, field
     assert np.all(np.diff(out["x_m"]) > 0)
     assert set(x) <= set(out["x_m"])  # no vertex lost (all of these are exact)
-    assert out["pressure_head_min_global_m"] == min(out["pressure_head_min_m"])
-    assert out["pressure_head_max_global_m"] == max(out["pressure_head_max_m"])
-    assert out["pressure_head_min_global_x_m"] in out["x_m"]
-    assert out["pressure_head_max_global_x_m"] in out["x_m"]
+    # scalars at full precision, lists at 3 decimals: compare the rounded scalar (D-63 (5))
+    assert r3(out["pressure_head_min_global_m"]) == min(out["pressure_head_min_m"])
+    assert r3(out["pressure_head_max_global_m"]) == max(out["pressure_head_max_m"])
+    assert r3(out["pressure_head_min_global_x_m"]) in out["x_m"]  # U-41 (2)
+    assert r3(out["pressure_head_max_global_x_m"]) in out["x_m"]
     assert out["pressure_head_min_global_time_s"] in out["time_s"]
     assert out["pressure_head_max_global_time_s"] in out["time_s"]
-    j = out["x_m"].index(out["pressure_head_min_global_x_m"])
-    assert out["pressure_head_min_m"][j] == out["pressure_head_min_global_m"]
+    j = out["x_m"].index(r3(out["pressure_head_min_global_x_m"]))
+    assert out["pressure_head_min_m"][j] == r3(out["pressure_head_min_global_m"])
 
 
 @pytest.mark.parametrize(
@@ -238,25 +243,41 @@ def test_f301_global_extreme_on_a_vertex_that_is_not_a_node(x, z, which, x_expec
     envelope = out[f"pressure_head_{which}_m"]
     assert out[f"pressure_head_{which}_global_x_m"] == x_expected
     assert at(out, "x_is_node", x_expected) is False
-    assert out[f"pressure_head_{which}_global_m"] == pick(envelope)
+    assert r3(out[f"pressure_head_{which}_global_m"]) == pick(envelope)  # D-63 (5)
     nodes_only = pick(v for v, node in zip(envelope, out["x_is_node"]) if node)
     assert abs(out[f"pressure_head_{which}_global_m"] - nodes_only) > 10.0
 
 
 def test_hu22_crit3_loma_lowers_minimum_pressure_by_its_height():
-    """V-10: p_min(500) with the loma = horizontal p_min(500) - 40 (± 1e-6 m)."""
+    """V-10: p_min(500) with the loma = horizontal p_min(500) - 40.
+
+    ± 1e-6 m on the internal arrays (test below); through solve() the lists are at 3 decimals,
+    so the difference of rounded lists is compared with 0.001 m + 1e-9 m (plan 01 §6, V-10).
+    """
     h = solve(horizontal())
     p = solve(profile(LOMA_X, LOMA_Z))
     assert at(p, "pressure_head_min_m", 500.0) == pytest.approx(
-        at(h, "pressure_head_min_m", 500.0) - 40.0, abs=TOL
+        at(h, "pressure_head_min_m", 500.0) - 40.0, abs=DIFF_TOL
     )
     # and at every node, by exactly its elevation
     np.testing.assert_allclose(
         node_values(p, "pressure_head_min_m"),
         np.array(h["pressure_head_min_m"]) - node_values(p, "elevation_m"),
-        rtol=0, atol=TOL,
+        rtol=0, atol=DIFF_TOL,
     )
     assert p["pressure_head_min_global_m"] < h["pressure_head_min_global_m"]
+
+
+def test_hu22_crit3_loma_identity_on_moc_result():
+    """V-10 at full precision (± 1e-6 m on MocResult), which U-39 leaves untouched."""
+    _, _, h = nodal_history(build_horizontal_mesh(1000.0, 20, 1000.0, 0.0), HORIZONTAL)
+    _, _, p = nodal_history(build_profile_mesh(LOMA_X, LOMA_Z, 20, 1000.0), HORIZONTAL)
+    nodes = p.mesh.station_is_node
+    np.testing.assert_allclose(
+        p.pressure_head_min_m[nodes],
+        h.pressure_head_min_m - p.mesh.station_elevation_m[nodes],
+        rtol=0, atol=TOL,
+    )
 
 
 # --------------------------------------------------------------------------- HU-2.3

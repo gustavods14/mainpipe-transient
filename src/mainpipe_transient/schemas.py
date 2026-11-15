@@ -1,15 +1,17 @@
-"""Layer-1 contract: request and response models (plan 01 §1.3-§1.5, SCHEMA_VERSION 1.0).
+"""Layer-1 contract: request and response models (plan 01 §1.3-§1.5, SCHEMA_VERSION 2.0).
 
 Range and cross-field rules are custom validators with Spanish messages (U-13), so
 that the portal's FastAPI 422 carries them in Spanish (kit 02 §3). Units are in the
 field names (U-06): flows in L/s, diameter in mm, lengths/heads in m, pressure heads
-in m of water column (``_m``), times in s, PN in bar.
+in m of water column (``_m``), times in s, PN in bar. Density and gravity are constants
+(rho = 1000 kg/m3, g = 9.81 m/s2; U-40), not fields. The m / m.c.a. / L/s output lists come
+rounded to 3 decimals; times and scalars at full precision (U-39, D-63).
 """
 
 from __future__ import annotations
 
 import math
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -26,7 +28,7 @@ from ._geometry import (
 
 __all__ = ["SCHEMA_VERSION", "SolveRequest", "SolveResponse", "Check", "CheckCode"]
 
-SCHEMA_VERSION = "1.0"  # frozen at G4 (U-15, U-37)
+SCHEMA_VERSION = "2.0"  # frozen at the new G4 of 2026-11-15 (U-15, U-37); was "1.0"
 
 CLOSURE_POINTS_MIN = 2
 CLOSURE_POINTS_MAX = 20
@@ -35,6 +37,18 @@ FRICTION_NUMBER_MAX = 0.5  # U-03
 PROFILE_POINTS_MIN = 2  # HU-2.3 crit. 2
 PROFILE_POINTS_MAX = 500
 _DURATION_ABS_TOL = 1e-9  # binary noise when comparing durations (same spirit as U-08)
+
+# Inputs retired in 2.0 (U-40): their own Spanish 422 instead of the generic extra_forbidden.
+_RETIRED_FIELDS = {
+    "density_kgm3": (
+        "density_kgm3: la densidad ya no es un dato de entrada; el cálculo usa "
+        "ρ = 1000 kg/m³. Quite el campo de la petición."
+    ),
+    "gravity_ms2": (
+        "gravity_ms2: la gravedad ya no es un dato de entrada; el cálculo usa "
+        "g = 9.81 m/s². Quite el campo de la petición."
+    ),
+}
 
 CheckCode = Literal[
     "PN_EXCEEDED",
@@ -112,8 +126,6 @@ class SolveRequest(BaseModel):
     reservoir_level_m: float = Field(
         ..., description="Constant reservoir level H_dep (m), same datum as the pipe."
     )
-    density_kgm3: float = Field(1000.0, description="Water density (kg/m3). > 0.")
-    gravity_ms2: float = Field(9.81, description="Gravity g (m/s2). 9.7 <= g <= 9.9.")
     pn_bar: float = Field(..., description="Pipe pressure rating PN (bar). > 0.")
     min_allowed_pressure_head_m: float = Field(
         -10.0,
@@ -142,6 +154,17 @@ class SolveRequest(BaseModel):
         True,
         description="If false, frame_* fields and frame_stride come back null.",
     )
+
+    # ------------------------------------------------------------ retired fields (U-40)
+    @model_validator(mode="before")
+    @classmethod
+    def _retired_fields(cls, data: Any) -> Any:
+        """Reject density_kgm3 / gravity_ms2 with a Spanish message (2.0, U-40, U-13)."""
+        if isinstance(data, dict):
+            found = [msg for name, msg in _RETIRED_FIELDS.items() if name in data]
+            if found:
+                raise ValueError(" ".join(found))
+        return data
 
     # ------------------------------------------------------------ field rules
     @field_validator("length_m")
@@ -191,26 +214,6 @@ class SolveRequest(BaseModel):
             raise ValueError(
                 f"initial_flow_lps = {fmt_value(v)} L/s no es válido: el caudal inicial debe "
                 "ser mayor que 0 L/s."
-            )
-        return v
-
-    @field_validator("density_kgm3")
-    @classmethod
-    def _density_positive(cls, v: float) -> float:
-        if not v > 0:
-            raise ValueError(
-                f"density_kgm3 = {fmt_value(v)} kg/m³ no es válido: la densidad debe ser "
-                "mayor que 0 kg/m³."
-            )
-        return v
-
-    @field_validator("gravity_ms2")
-    @classmethod
-    def _gravity_range(cls, v: float) -> float:
-        if not 9.7 <= v <= 9.9:
-            raise ValueError(
-                f"gravity_ms2 = {fmt_value(v)} m/s² está fuera de rango: la gravedad debe "
-                "estar entre 9.7 y 9.9 m/s²."
             )
         return v
 
@@ -526,12 +529,16 @@ class Check(BaseModel):
     message: str = Field(..., description="User-facing message, in Spanish, with units.")
     value_m: float = Field(..., description="Value that triggers the check (m of water column).")
     limit_m: float = Field(..., description="Threshold crossed (m of water column).")
-    x_m: float = Field(..., description="Chainage of the value (m); one of x_m.")
+    x_m: float = Field(
+        ...,
+        description="Chainage of the value (m), full precision; rounded to 3 decimals it is "
+        "one of x_m.",
+    )
     time_s: float = Field(..., description="Instant of the value (s); one of time_s.")
     first_x_m: float | None = Field(
         None,
-        description="COLUMN_SEPARATION_RISK only: first chainage below the limit (m). "
-        "null for the other codes.",
+        description="COLUMN_SEPARATION_RISK only: first chainage below the limit (m), full "
+        "precision; rounded to 3 decimals it is one of x_m. null for the other codes.",
     )
     first_time_s: float | None = Field(
         None,
@@ -546,6 +553,11 @@ class Check(BaseModel):
 
 
 _NULL_WITHOUT_FRAMES = " null when include_frames is false."
+# U-39, D-63 (1)-(2): every m / m.c.a. / L/s list; time_s, frame_time_s and scalars are not.
+_ROUNDED = (
+    " Rounded to 3 decimals: compare with a scalar after rounding it to 3 decimals, or "
+    "within 0.0005."
+)
 
 
 class SolveResponse(BaseModel):
@@ -566,7 +578,10 @@ class SolveResponse(BaseModel):
     length_m: float = Field(..., description="Pipe length L (m).")
     area_m2: float = Field(..., description="Cross-section A = pi*D^2/4 (m2).")
     velocity_initial_ms: float = Field(..., description="Steady velocity V0 = Q0/A (m/s).")
-    head_loss_m: float = Field(..., description="Steady friction loss h_f = f*(L/D)*V0^2/(2g) (m).")
+    head_loss_m: float = Field(
+        ...,
+        description="Steady friction loss h_f = f*(L/D)*V0^2/(2g) (m), with g = 9.81 m/s2.",
+    )
     dx_m: float = Field(..., description="Reach length dx = L/N (m).")
     dt_s: float = Field(..., description="Time step dt = dx/a (s).")
     n_reaches: int = Field(..., description="Number of reaches N used.")
@@ -582,39 +597,42 @@ class SolveResponse(BaseModel):
     )
 
     # time series, length n_steps + 1
-    time_s: list[float] = Field(..., description="Instants k*dt (s).")
-    head_valve_m: list[float] = Field(..., description="Piezometric head at the valve (m).")
+    time_s: list[float] = Field(..., description="Instants k*dt (s), not rounded.")
+    head_valve_m: list[float] = Field(..., description="Piezometric head at the valve (m)." + _ROUNDED)
     head_midpoint_m: list[float] = Field(
-        ..., description="Piezometric head at the node x = L/2 (m)."
+        ..., description="Piezometric head at the node x = L/2 (m)." + _ROUNDED
     )
     pressure_head_valve_m: list[float] = Field(
-        ..., description="Pressure head at the valve, H - z (m of water column)."
+        ..., description="Pressure head at the valve, H - z (m of water column)." + _ROUNDED
     )
     pressure_head_midpoint_m: list[float] = Field(
-        ..., description="Pressure head at x = L/2, H - z (m of water column)."
+        ..., description="Pressure head at x = L/2, H - z (m of water column)." + _ROUNDED
     )
-    flow_reservoir_lps: list[float] = Field(..., description="Flow at the reservoir (L/s).")
-    flow_valve_lps: list[float] = Field(..., description="Flow at the valve (L/s).")
+    flow_reservoir_lps: list[float] = Field(..., description="Flow at the reservoir (L/s)." + _ROUNDED)
+    flow_valve_lps: list[float] = Field(..., description="Flow at the valve (L/s)." + _ROUNDED)
 
     # envelopes per chainage
     x_m: list[float] = Field(
-        ..., description="Chainages (m): computational nodes and profile vertices, sorted."
+        ...,
+        description="Chainages (m): computational nodes and profile vertices, sorted and "
+        "without duplicates at full precision. At 3 decimals it is non-decreasing: two "
+        "chainages less than 1 mm apart may show the same value.",
     )
     x_is_node: list[bool] = Field(
         ..., description="true if the chainage is a computational node, false if only a vertex."
     )
-    elevation_m: list[float] = Field(..., description="Pipe elevation z(x) (m).")
-    head_initial_m: list[float] = Field(..., description="Steady-state head (m).")
+    elevation_m: list[float] = Field(..., description="Pipe elevation z(x) (m)." + _ROUNDED)
+    head_initial_m: list[float] = Field(..., description="Steady-state head (m)." + _ROUNDED)
     pressure_head_initial_m: list[float] = Field(
-        ..., description="Steady-state pressure head (m of water column)."
+        ..., description="Steady-state pressure head (m of water column)." + _ROUNDED
     )
-    head_max_m: list[float] = Field(..., description="Maximum head over all steps (m).")
-    head_min_m: list[float] = Field(..., description="Minimum head over all steps (m).")
+    head_max_m: list[float] = Field(..., description="Maximum head over all steps (m)." + _ROUNDED)
+    head_min_m: list[float] = Field(..., description="Minimum head over all steps (m)." + _ROUNDED)
     pressure_head_max_m: list[float] = Field(
-        ..., description="Maximum pressure head over all steps (m of water column)."
+        ..., description="Maximum pressure head over all steps (m of water column)." + _ROUNDED
     )
     pressure_head_min_m: list[float] = Field(
-        ..., description="Minimum pressure head over all steps (m of water column)."
+        ..., description="Minimum pressure head over all steps (m of water column)." + _ROUNDED
     )
 
     # extremes (tie-break: first instant, then lower x)
@@ -635,7 +653,9 @@ class SolveResponse(BaseModel):
 
     # pressure rating and depression limit
     pn_head_m: float = Field(
-        ..., description="PN as pressure head, PN*1e5/(rho*g) (m of water column)."
+        ...,
+        description="PN as pressure head, PN*1e5/(rho*g) (m of water column), with "
+        "rho = 1000 kg/m3 and g = 9.81 m/s2.",
     )
     pressure_max_pn_ratio_pct: float = Field(
         ..., description="100*pressure_head_max_global_m/pn_head_m (%)."
@@ -648,9 +668,13 @@ class SolveResponse(BaseModel):
     maneuver_type: Literal["rapid", "slow"] = Field(
         ..., description="'rapid' if Tc <= 2L/a, else 'slow'."
     )
-    joukowsky_head_rise_m: float = Field(..., description="Joukowsky rise a*V0/g (m).")
+    joukowsky_head_rise_m: float = Field(
+        ..., description="Joukowsky rise a*V0/g (m), with g = 9.81 m/s2."
+    )
     michaud_head_rise_m: float | None = Field(
-        ..., description="Michaud rise 2*L*V0/(g*Tc) (m). null for a rapid maneuver."
+        ...,
+        description="Michaud rise 2*L*V0/(g*Tc) (m), with g = 9.81 m/s2. null for a rapid "
+        "maneuver.",
     )
     full_pulse_length_m: float | None = Field(
         ..., description="Full-pulse length L - a*Tc/2 (m). null for a slow maneuver."
@@ -672,17 +696,21 @@ class SolveResponse(BaseModel):
     )
     frame_time_s: list[float] | None = Field(
         ...,
-        description="Frame instants (s), each one a value of time_s; the first is 0 and the "
-        "last is duration_s. At most min(1001, floor(50000 / len(x_m))) frames."
+        description="Frame instants (s), not rounded, each one exactly a value of time_s; "
+        "the first is 0 and the last is duration_s. Frame k is step i_k with "
+        "time_s[i_k] == frame_time_s[k]: i_k = k*frame_stride except the last frame, which "
+        "is always i = n_steps. At most min(1001, floor(50000 / len(x_m))) frames."
         + _NULL_WITHOUT_FRAMES,
     )
     frame_x_m: list[float] | None = Field(
-        ..., description="Identical to x_m (m)." + _NULL_WITHOUT_FRAMES
+        ...,
+        description="Identical to x_m, element by element (m, 3 decimals)." + _NULL_WITHOUT_FRAMES,
     )
     frame_head_m: list[list[float]] | None = Field(
-        ..., description="[k][j]: head at frame k, chainage j (m)." + _NULL_WITHOUT_FRAMES
-    )
-    frame_pressure_head_m: list[list[float]] | None = Field(
         ...,
-        description="[k][j]: pressure head H - z (m of water column)." + _NULL_WITHOUT_FRAMES,
+        description="[k][j]: piezometric head at frame k, chainage j (m, 3 decimals). The "
+        "pressure head is frame_head_m[k][j] - elevation_m[j] (m of water column), the same "
+        "H - z with the same elevation as every pressure_head_* field; within "
+        "0.001 m + 1e-9 m of the full-precision value rounded to 3 decimals."
+        + _NULL_WITHOUT_FRAMES,
     )

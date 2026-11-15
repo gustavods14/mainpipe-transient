@@ -13,6 +13,7 @@ import statistics
 import time
 
 import numpy as np
+import pydantic
 import pytest
 
 import mainpipe_transient as mpt
@@ -24,6 +25,7 @@ from mainpipe_transient import (
     solve,
 )
 from mainpipe_transient._geometry import MAX_STEPS, count_steps, time_step_s
+from rounding import HALF_MM
 
 EXCEL_INPUT = {
     "geometry": "horizontal",
@@ -34,8 +36,6 @@ EXCEL_INPUT = {
     "darcy_friction_factor": 0.02,
     "initial_flow_lps": 100.0,
     "reservoir_level_m": 100.0,
-    "density_kgm3": 1000.0,
-    "gravity_ms2": 9.81,
     "pn_bar": 25.0,
     "closure_time_s": [0.0, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0],
     "closure_flow_lps": [100.0, 50.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -79,7 +79,7 @@ def test_response_is_strict_json_and_valid_contract():
     text = json.dumps(out, allow_nan=False)  # no NaN / inf / numpy types
     assert json.loads(text) == out
     SolveResponse.model_validate(out)
-    assert out["schema_version"] == mpt.SCHEMA_VERSION == "1.0"
+    assert out["schema_version"] == mpt.SCHEMA_VERSION == "2.0"
     assert out["scenario"] == "reservoir_pipe_valve"
     assert out["geometry"] == "horizontal"
     assert "frame_flow_lps" not in out  # U-33
@@ -124,7 +124,7 @@ def test_min_allowed_pressure_echo():
 
 def test_include_frames_toggles_the_frame_fields():
     """U-24: frame_* null only with include_frames = false (phase 5 fills them)."""
-    keys = ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m", "frame_pressure_head_m")
+    keys = ("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m")  # 2.0: U-24, D-64
     with_frames = solve(case())
     without = solve(case(include_frames=False))
     for key in keys:
@@ -144,13 +144,19 @@ def test_v05_through_solve_with_contract_units(excel_reference):
     assert out["n_steps"] == 400
     np.testing.assert_array_equal(out["x_m"], grid["x_m"])
     np.testing.assert_allclose(out["time_s"], grid["time_s"], rtol=0, atol=1e-12)
-    np.testing.assert_allclose(out["head_valve_m"], ref_h[:, -1], rtol=0, atol=H_TOL)
-    np.testing.assert_allclose(out["head_midpoint_m"], ref_h[:, mid], rtol=0, atol=H_TOL)
-    np.testing.assert_allclose(out["flow_valve_lps"], ref_q_lps[:, -1], rtol=0, atol=Q_TOL_LPS)
-    np.testing.assert_allclose(out["flow_reservoir_lps"], ref_q_lps[:, 0], rtol=0, atol=Q_TOL_LPS)
-    np.testing.assert_allclose(out["head_initial_m"], ref_h[0], rtol=0, atol=H_TOL)
-    np.testing.assert_allclose(out["head_max_m"], ref_h.max(axis=0), rtol=0, atol=H_TOL)
-    np.testing.assert_allclose(out["head_min_m"], ref_h.min(axis=0), rtol=0, atol=H_TOL)
+    # 2.0: the lists come at 3 decimals (U-39), so V-05 through solve() is ± (0.0005 + 1e-6)
+    # m or L/s (plan 01 §6, V-05); ± 1e-6 still holds on MocResult (test_excel_reference)
+    h_tol, q_tol = H_TOL + HALF_MM, Q_TOL_LPS + HALF_MM
+    np.testing.assert_allclose(out["head_valve_m"], ref_h[:, -1], rtol=0, atol=h_tol)
+    np.testing.assert_allclose(out["head_midpoint_m"], ref_h[:, mid], rtol=0, atol=h_tol)
+    np.testing.assert_allclose(out["flow_valve_lps"], ref_q_lps[:, -1], rtol=0, atol=q_tol)
+    np.testing.assert_allclose(out["flow_reservoir_lps"], ref_q_lps[:, 0], rtol=0, atol=q_tol)
+    np.testing.assert_allclose(out["head_initial_m"], ref_h[0], rtol=0, atol=h_tol)
+    np.testing.assert_allclose(out["head_max_m"], ref_h.max(axis=0), rtol=0, atol=h_tol)
+    np.testing.assert_allclose(out["head_min_m"], ref_h.min(axis=0), rtol=0, atol=h_tol)
+    # extremes are scalars at full precision: still ± 1e-6 m (V-05)
+    assert out["head_valve_max_m"] == pytest.approx(ref_h[:, -1].max(), abs=H_TOL)
+    assert out["head_valve_min_m"] == pytest.approx(ref_h[:, -1].min(), abs=H_TOL)
 
 
 def test_unit_conversions_are_exercised():
@@ -270,8 +276,6 @@ def test_hu16_crit6_law_length(times, flows, expected):
         ("inner_diameter_mm", -300.0, "mayor que 0 mm"),
         ("initial_flow_lps", 0.0, "mayor que 0 L/s"),
         ("pn_bar", 0.0, "mayor que 0 bar"),
-        ("density_kgm3", 0.0, "mayor que 0 kg/m³"),
-        ("gravity_ms2", 9.5, "entre 9.7 y 9.9 m/s²"),
     ],
 )
 def test_hu16_crit7_ranges_name_field_and_limit(field, value, expected):
@@ -481,12 +485,57 @@ def test_f201_validator_bug_is_wrapped(monkeypatch):
     assert "injected" not in str(info.value)
 
 
-def test_f202_density_and_gravity_enter_pn_head():
-    out = solve(case(density_kgm3=998.2, gravity_ms2=9.78))
-    assert out["pn_head_m"] == pytest.approx(25e5 / (998.2 * 9.78), rel=1e-12)
-    assert solve(case(density_kgm3=1025.0))["pn_head_m"] == pytest.approx(
-        25e5 / (1025.0 * 9.81), rel=1e-12
-    )
+def test_u40_fixed_density_and_gravity_enter_pn_head():
+    """2.0 replaces F2-02: rho and g are constants (U-40), PN*1e5/(1000*9.81) (V-12)."""
+    out = solve(case())
+    assert out["pn_head_m"] == pytest.approx(25e5 / (1000.0 * 9.81), rel=1e-12)
+    assert "density_kgm3" not in mpt.SolveRequest.model_fields
+    assert "gravity_ms2" not in mpt.SolveRequest.model_fields
+
+
+DENSITY_MSG = (
+    "density_kgm3: la densidad ya no es un dato de entrada; el cálculo usa ρ = 1000 kg/m³. "
+    "Quite el campo de la petición."
+)
+GRAVITY_MSG = (
+    "gravity_ms2: la gravedad ya no es un dato de entrada; el cálculo usa g = 9.81 m/s². "
+    "Quite el campo de la petición."
+)
+
+
+@pytest.mark.parametrize(
+    "extra, expected",
+    [
+        ({"density_kgm3": 1000.0}, [DENSITY_MSG]),
+        ({"gravity_ms2": 9.81}, [GRAVITY_MSG]),
+        ({"density_kgm3": 1025.0, "gravity_ms2": 9.78}, [DENSITY_MSG, GRAVITY_MSG]),
+        ({"density_kgm3": None}, [DENSITY_MSG]),
+    ],
+    ids=["density", "gravity", "both", "null"],
+)
+def test_u40_retired_fields_give_their_own_422(extra, expected):
+    """HU-1.6 crit. 7 in 2.0: a 1.0 request with rho or g is rejected with its own message."""
+    msg = reject({**case(), **extra})
+    for text in expected:
+        assert text in msg
+    assert "revisa el nombre" not in msg  # not the generic extra_forbidden text
+    if len(expected) == 1:
+        other = GRAVITY_MSG if expected[0] == DENSITY_MSG else DENSITY_MSG
+        assert other not in msg
+
+
+def test_u40_retired_field_message_travels_through_pydantic_in_spanish():
+    """FastAPI validates with the same model first: the 422 must carry the Spanish text."""
+    with pytest.raises(pydantic.ValidationError) as info:
+        mpt.SolveRequest.model_validate({**case(), "gravity_ms2": 9.81})
+    [err] = info.value.errors(include_url=False)
+    assert err["type"] == "value_error"
+    assert GRAVITY_MSG in err["msg"]
+
+
+def test_unknown_field_keeps_the_generic_extra_forbidden_422():
+    msg = reject({**case(), "densidad": 1000.0})
+    assert "densidad: campo no admitido (revisa el nombre)." in msg
 
 
 def test_f203_displayed_maximum_below_minimum_suggests_coarser_mesh():
@@ -518,9 +567,9 @@ def test_f204_huge_magnitudes_stay_readable():
 
 
 def test_f204_many_errors_fit_the_portal_limit():
-    msg = reject(case(wave_speed_ms=2000.0, darcy_friction_factor=1.0, gravity_ms2=1.0,
-                      pn_bar=-1.0, density_kgm3=-1.0, initial_flow_lps=-1.0,
-                      inner_diameter_mm=-1.0, n_reaches=3))
+    msg = reject(case(wave_speed_ms=2000.0, darcy_friction_factor=1.0, pn_bar=-1.0,
+                      min_allowed_pressure_head_m=5.0, initial_flow_lps=-1.0,
+                      inner_diameter_mm=-1.0, n_reaches=3, length_m=-1.0))
     assert len(msg) <= 400
     assert "errores más)" in msg
 
