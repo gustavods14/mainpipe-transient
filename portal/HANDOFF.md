@@ -7,7 +7,7 @@
 | Distribución | `mainpipe-transient` |
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.0` |
-| Versión del contrato (`SCHEMA_VERSION`) | `1.0` (congelada en G4) |
+| Versión del contrato (`SCHEMA_VERSION`) | `2.0` (plan congelado el 2026-11-15; G4 pendiente de aprobar) — antes `1.0` |
 | Commit a pinear | — (se llena en la entrega) |
 
 ## Etapas
@@ -128,3 +128,12 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   ±0.0005 m entre el tramo rojo y los avisos, en la que manda el aviso (U-39, DR-7). Esquema
   validado con jsonschema contra `06-ui-spec.schema.json` (kit 3.0.0). Siguiente:
   `/hie-flow requests` para llevar DR-7 … DR-10 al portal.
+- 2026-11-15: el portal resolvió DR-7 … DR-10 con la alternativa (a) en los cuatro (D-63 … D-66;
+  sin commit en el portal al registrarlo). `hie-architect` los incorporó y dejó el plan
+  `doc/plans/01-golpe-ariete-v1.md` **congelado** con `SCHEMA_VERSION` = `"2.0"`: §1.5, U-36 y V-13
+  con el rojo leído del aviso `danger` (D-63); invariantes `frame_x_m == x_m` y p = H − z (U-42,
+  D-64; `frame_x_m` se mantiene por decisión del dueño); dos mediciones de tamaño ≤ 3 500 000 B y
+  U-34 (6) «detener y abrir DR» (D-65); U-32 retirada (D-66). Ningún DR abierto.
+- 2026-11-15: `hie-prototyper` ajustó `portal/ui-spec.json` y `portal/prototype.html` a D-63
+  (marcador del cruce desde el aviso, tramo solo con aviso) sin cambiar el uso aprobado en G3;
+  esquema validado con jsonschema. El dueño lo revisa en G4.

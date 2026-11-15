@@ -17,7 +17,7 @@
   del caso del Excel, no resuelve el MOC.
   Revisión 2026-11-14 (etapa 3 reabierta): incorpora las decisiones del portal D-57 (tope de 10 000
   pasos), D-58 (instante como estado del panel, teclado, «Ir a t»), D-59 (barra sticky solo ≥ lg,
-  una fila, offset lg:top-20), D-60 (colores con roles documentados; rojo solo en el cruce),
+  una fila, offset lg:top-20), D-60 (colores con roles documentados; rojo solo en el cruce, y desde D-63 solo con aviso danger),
   D-61 (fórmulas en HTML con <var>/<sub>) y D-62 (sin IA). Límite leído del eco
   response.min_allowed_pressure_head_m (U-35).
 -->
@@ -981,8 +981,8 @@ function solveFake() {
   const checks = [];
   const f1 = (v) => fmt(v, 1);
   const at = (v, x, t) => `${f1(v)} m.c.a. · x = ${f1(x)} m · t = ${fmt(t, 2)} s`;
-  if (ratio > 100) checks.push({ code: 'PN_EXCEEDED', sev: 'error', t: pmax.t, short: at(pmax.v, pmax.x, pmax.t), msg: `La presión máxima (${f1(pmax.v)} m.c.a. en x = ${f1(pmax.x)} m, t = ${fmt(pmax.t, 2)} s) supera el PN ${num('pn_bar')} bar (${f1(pnHead)} m.c.a.). Aumente la clase de la tubería o alargue el cierre.` });
-  if (pmin.v < lim) checks.push({ code: 'COLUMN_SEPARATION_RISK', sev: 'error', t: first.t, short: `primer cruce ${at(first.v, first.x, first.t)}`, msg: `La presión cae a ${f1(first.v)} m.c.a., por debajo del límite admisible de ${f1(lim)} m.c.a., por primera vez en x = ${f1(first.x)} m y t = ${fmt(first.t, 2)} s. A partir de ese instante puede haber separación de columna y los resultados del MOC simple dejan de ser físicos: las presiones y caudales posteriores no son fiables. Mínimo de la simulación: ${f1(pmin.v)} m.c.a. en x = ${f1(pmin.x)} m, t = ${fmt(pmin.t, 2)} s.` });
+  if (ratio > 100) checks.push({ code: 'PN_EXCEEDED', sev: 'error', t: pmax.t, x: pmax.x, v: pmax.v, short: at(pmax.v, pmax.x, pmax.t), msg: `La presión máxima (${f1(pmax.v)} m.c.a. en x = ${f1(pmax.x)} m, t = ${fmt(pmax.t, 2)} s) supera el PN ${num('pn_bar')} bar (${f1(pnHead)} m.c.a.). Aumente la clase de la tubería o alargue el cierre.` });
+  if (pmin.v < lim) checks.push({ code: 'COLUMN_SEPARATION_RISK', sev: 'error', t: first.t, x: pmin.x, v: pmin.v, short: `primer cruce ${at(first.v, first.x, first.t)}`, msg: `La presión cae a ${f1(first.v)} m.c.a., por debajo del límite admisible de ${f1(lim)} m.c.a., por primera vez en x = ${f1(first.x)} m y t = ${fmt(first.t, 2)} s. A partir de ese instante puede haber separación de columna y los resultados del MOC simple dejan de ser físicos: las presiones y caudales posteriores no son fiables. Mínimo de la simulación: ${f1(pmin.v)} m.c.a. en x = ${f1(pmin.x)} m, t = ${fmt(pmin.t, 2)} s.` });
   if (steadyMin < lim) checks.push({ code: 'STEADY_NEGATIVE_PRESSURE', sev: 'error', t: 0, short: at(steadyMin, steadyX, 0), msg: `En régimen permanente la presión ya es ${f1(steadyMin)} m.c.a. en x = ${f1(steadyX)} m, por debajo del límite de ${f1(lim)} m.c.a. La piezométrica de régimen pasa bajo el eje de la tubería.` });
   if (ratio > 80 && ratio <= 100) checks.push({ code: 'PN_NEAR_LIMIT', sev: 'warning', t: pmax.t, short: `${f1(ratio)} % del PN · ${at(pmax.v, pmax.x, pmax.t)}`, msg: `La presión máxima (${f1(pmax.v)} m.c.a. en x = ${f1(pmax.x)} m, t = ${fmt(pmax.t, 2)} s) es el ${f1(ratio)} % del PN ${num('pn_bar')} bar (${f1(pnHead)} m.c.a.).` });
   if (pmin.v >= lim && pmin.v < 0) checks.push({ code: 'SUBATMOSPHERIC_PRESSURE', sev: 'warning', t: pmin.t, short: at(pmin.v, pmin.x, pmin.t), msg: `La presión mínima es ${f1(pmin.v)} m.c.a. en x = ${f1(pmin.x)} m, t = ${fmt(pmin.t, 2)} s: subatmosférica, sobre el límite admisible de ${f1(lim)} m.c.a.` });
@@ -1077,13 +1077,14 @@ function vmarks() {
   return [[0, '--color-chart-series-3', 'depósito', 'left'], [L / 2, '--color-chart-series-2', 'L/2', 'center'], [L, '--color-chart-series-1', 'válvula', 'right']]
     .map(([x, tok, text, align]) => ({ xAxis: x, lineStyle: { color: css(tok), type: 'dotted', width: 1.5 }, label: Object.assign(lblStyle(lbl), { formatter: text, position: 'end', align }) }));
 }
-// Cruce de umbral en rojo (D-60), con el mismo predicado que los avisos danger (plan §1.5), sobre
-// las envolventes a 3 decimales: a ≤ 0.0005 m del umbral puede discrepar del aviso y manda el aviso (U-36, DR-7).
-// punto en cada j que lo cumple y trazo hasta la j siguiente si también lo cumple. '-' = hueco.
-function crossing(id, name, xs, ys, pred) {
+// Rojo solo con aviso danger (D-60 (1) enmendada por D-63 (3)-(4), plan §1.5). Tramo opcional sobre
+// las envolventes a 3 decimales: punto en cada j que cumple y trazo hasta la j siguiente si también
+// cumple ('-' = hueco), pero solo si existe el aviso del umbral (check); sin aviso, ningún tramo.
+// Único desacuerdo admitido: aviso y marcador sin tramo a < 0.0005 m del umbral.
+function crossing(id, name, xs, ys, pred, check) {
   const c = css('--color-chart-critical');
   return { id, name, type: 'line', silent: true, z: 4, tooltip: { show: false }, color: c,
-    data: xs.map((x, j) => [x, pred(ys[j]) ? ys[j] : '-']), connectNulls: false,
+    data: xs.map((x, j) => [x, check && pred(ys[j]) ? ys[j] : '-']), connectNulls: false,
     showSymbol: true, symbol: 'circle', symbolSize: 6, itemStyle: { color: c }, lineStyle: { color: c, width: 2.5 } };
 }
 function hLine(y, tok, text, position = 'insideStartTop') {
@@ -1117,7 +1118,10 @@ function buildResults() {
   ch('chProfile').setOption(o, true);
 
   // Presión p/γ(x)
-  const pMx = R.pMax, pMn = R.pMin, lbl = css('--color-chart-label'), op = css('--color-chart-operating');
+  const pMx = R.pMax, pMn = R.pMin, lbl = css('--color-chart-label'), op = css('--color-chart-operating'), crit = css('--color-chart-critical');
+  // Cada umbral lo gobierna un único aviso (plan §1.5): PN → PN_EXCEEDED; límite → COLUMN_SEPARATION_RISK.
+  // Con aviso, el marcador del extremo de ese lado pasa a critical en (x_m, value_m) del aviso.
+  const cPN = R.checks.find((c) => c.code === 'PN_EXCEEDED'), cLim = R.checks.find((c) => c.code === 'COLUMN_SEPARATION_RISK');
   o = baseOpt(Object.assign({ xname: 'Progresiva x [m]', x1: L, yname: 'p/γ [m.c.a.]', yunit: 'm.c.a.', y: niceRange([pMx, pMn, [R.pnHead, R.lim]]) }, SP));
   o.series = [
     band(R.xs, pMn, pMx),
@@ -1126,13 +1130,13 @@ function buildResults() {
     line('preg', 'Régimen', R.xs, R.pInit, reg, { width: 1.5, dash: true, extra: { markLine: markLine(vmarks().concat([
       hLine(R.pnHead, '--color-chart-label', `PN ${fmt(R.pnHead, 1)}`),
       hLine(R.lim, '--color-chart-label', `límite ${fmt(R.lim, 1)}`)])) } }),
-    crossing('xpn', 'Cruce del PN', R.xs, pMx, (p) => p > R.pnHead),
-    crossing('xlim', 'Cruce de la presión mínima admisible', R.xs, pMn, (p) => p < R.lim),
+    crossing('xpn', 'Cruce del PN', R.xs, pMx, (p) => p > R.pnHead, cPN),
+    crossing('xlim', 'Cruce de la presión mínima admisible', R.xs, pMn, (p) => p < R.lim, cLim),
     line('inst', 'Instante t', R.xs, pr(f), inst, { width: 2.5, z: 5 }),
     { id: 'ext', type: 'scatter', silent: true, z: 6, tooltip: { show: false }, symbolSize: 8, itemStyle: { color: op },
       data: [
-        { value: [R.pmax.x, R.pmax.v], label: Object.assign(lblStyle(lbl), { formatter: `máx ${fmt(R.pmax.v, 1)}`, position: 'left', offset: [0, 14] }) },
-        { value: [R.pmin.x, R.pmin.v], label: Object.assign(lblStyle(lbl), { formatter: `mín ${fmt(R.pmin.v, 1)}`, position: 'left', offset: [0, -12] }) }] },
+        { value: cPN ? [cPN.x, cPN.v] : [R.pmax.x, R.pmax.v], itemStyle: { color: cPN ? crit : op }, label: Object.assign(lblStyle(lbl), { formatter: `máx ${fmt(R.pmax.v, 1)}`, position: 'left', offset: [0, 14] }) },
+        { value: cLim ? [cLim.x, cLim.v] : [R.pmin.x, R.pmin.v], itemStyle: { color: cLim ? crit : op }, label: Object.assign(lblStyle(lbl), { formatter: `mín ${fmt(R.pmin.v, 1)}`, position: 'left', offset: [0, -12] }) }] },
   ];
   ch('chPress').setOption(o, true);
 
