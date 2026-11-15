@@ -1,0 +1,36 @@
+{
+  "id": "error-ley-no-creciente",
+  "description": "422: los tiempos de la ley de cierre no son estrictamente crecientes (punto 3 igual al punto 2).",
+  "function": "solve",
+  "package_version": "0.1.0",
+  "schema_version": "2.0",
+  "generated_at": "2026-11-15",
+  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_with": {
+    "python": "3.12.10",
+    "numpy": "2.5.5",
+    "pydantic": "2.14.3"
+  },
+  "inputs": {
+    "geometry": "horizontal",
+    "length_m": 1000.0,
+    "pipe_elevation_m": 0.0,
+    "inner_diameter_mm": 300.0,
+    "wave_speed_ms": 1000.0,
+    "darcy_friction_factor": 0.02,
+    "initial_flow_lps": 100.0,
+    "reservoir_level_m": 100.0,
+    "pn_bar": 25.0,
+    "closure_time_s": [0.0, 1.0, 1.0, 2.0],
+    "closure_flow_lps": [100.0, 50.0, 20.0, 0.0],
+    "n_reaches": 20,
+    "duration_s": 20.0,
+    "include_frames": false
+  },
+  "expects_error": true,
+  "expected": {
+    "exception": "MainpipeTransientValidationError",
+    "http_status": 422
+  },
+  "message": "Los tiempos de la ley de cierre (closure_time_s) deben ser estrictamente crecientes: el punto 3 (t = 1 s) no es mayor que el punto 2 (t = 1 s)."
+}

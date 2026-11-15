@@ -1,0 +1,36 @@
+{
+  "id": "error-tope-de-pasos",
+  "description": "422: más pasos que MAX_STEPS = 10 000 (HU-1.6 crit. 13, D-57): caso del Excel con n_reaches = 200 y duration_s = 50.001 s; el mensaje da la duración máxima admisible (50 s) y la malla más gruesa que la admite.",
+  "function": "solve",
+  "package_version": "0.1.0",
+  "schema_version": "2.0",
+  "generated_at": "2026-11-15",
+  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_with": {
+    "python": "3.12.10",
+    "numpy": "2.5.5",
+    "pydantic": "2.14.3"
+  },
+  "inputs": {
+    "geometry": "horizontal",
+    "length_m": 1000.0,
+    "pipe_elevation_m": 0.0,
+    "inner_diameter_mm": 300.0,
+    "wave_speed_ms": 1000.0,
+    "darcy_friction_factor": 0.02,
+    "initial_flow_lps": 100.0,
+    "reservoir_level_m": 100.0,
+    "pn_bar": 25.0,
+    "closure_time_s": [0.0, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0],
+    "closure_flow_lps": [100.0, 50.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "n_reaches": 200,
+    "duration_s": 50.001,
+    "include_frames": false
+  },
+  "expects_error": true,
+  "expected": {
+    "exception": "MainpipeTransientValidationError",
+    "http_status": 422
+  },
+  "message": "duration_s = 50.001 s necesita 10001 pasos con n_reaches = 200 y supera el tope de 10000 pasos. La duración máxima admisible con esa malla es 50 s: acorta duration_s a 50 s o menos o usa una malla más gruesa (n_reaches <= 198)."
+}

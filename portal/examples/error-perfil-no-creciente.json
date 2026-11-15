@@ -1,0 +1,36 @@
+{
+  "id": "error-perfil-no-creciente",
+  "description": "422: la progresiva del perfil no es estrictamente creciente (punto 3 menor que el 2).",
+  "function": "solve",
+  "package_version": "0.1.0",
+  "schema_version": "2.0",
+  "generated_at": "2026-11-15",
+  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_with": {
+    "python": "3.12.10",
+    "numpy": "2.5.5",
+    "pydantic": "2.14.3"
+  },
+  "inputs": {
+    "geometry": "profile",
+    "inner_diameter_mm": 300.0,
+    "wave_speed_ms": 1000.0,
+    "darcy_friction_factor": 0.02,
+    "initial_flow_lps": 100.0,
+    "reservoir_level_m": 100.0,
+    "pn_bar": 25.0,
+    "closure_time_s": [0.0, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0],
+    "closure_flow_lps": [100.0, 50.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "n_reaches": 20,
+    "duration_s": 20.0,
+    "include_frames": false,
+    "profile_x_m": [0.0, 500.0, 400.0, 1000.0],
+    "profile_z_m": [0.0, 10.0, 5.0, 0.0]
+  },
+  "expects_error": true,
+  "expected": {
+    "exception": "MainpipeTransientValidationError",
+    "http_status": 422
+  },
+  "message": "La progresiva del perfil (profile_x_m) debe ser estrictamente creciente: x[2] = 400 m (punto 3) es menor que x[1] = 500 m (punto 2)."
+}

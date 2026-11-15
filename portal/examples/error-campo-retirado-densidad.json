@@ -1,0 +1,37 @@
+{
+  "id": "error-campo-retirado-densidad",
+  "description": "422 de migración 1.0 → 2.0 (U-40): la petición trae density_kgm3, que ya no es un dato de entrada (ρ = 1000 kg/m³ fija). Mensaje propio en español.",
+  "function": "solve",
+  "package_version": "0.1.0",
+  "schema_version": "2.0",
+  "generated_at": "2026-11-15",
+  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_with": {
+    "python": "3.12.10",
+    "numpy": "2.5.5",
+    "pydantic": "2.14.3"
+  },
+  "inputs": {
+    "geometry": "horizontal",
+    "length_m": 1000.0,
+    "pipe_elevation_m": 0.0,
+    "inner_diameter_mm": 300.0,
+    "wave_speed_ms": 1000.0,
+    "darcy_friction_factor": 0.02,
+    "initial_flow_lps": 100.0,
+    "reservoir_level_m": 100.0,
+    "pn_bar": 25.0,
+    "closure_time_s": [0.0, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0],
+    "closure_flow_lps": [100.0, 50.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "n_reaches": 20,
+    "duration_s": 20.0,
+    "include_frames": false,
+    "density_kgm3": 1000.0
+  },
+  "expects_error": true,
+  "expected": {
+    "exception": "MainpipeTransientValidationError",
+    "http_status": 422
+  },
+  "message": "density_kgm3: la densidad ya no es un dato de entrada; el cálculo usa ρ = 1000 kg/m³. Quite el campo de la petición."
+}

@@ -140,3 +140,31 @@ en tres puntos:
   adversaria 2 819 475 B (22.37 B por número); cota analítica 3 285 874 B; petición 19 919 B; caso
   del Excel 90 471 B con fotogramas y 24 039 B sin ellos. Todo ≤ 3 500 000 B (y ≤ 65 536 B la
   petición): no se abre pedido (U-34 (6)). Peor caso con fotogramas, mediana 0.243 s (V-16).
+
+### Fase 6 — entrega
+
+- `tools/make_examples.py` (fuera del paquete): genera `portal/examples/*.json` llamando a
+  `solve` del paquete importable, con el formato de `kit 04 §2` (`expected` = salida pasada por
+  JSON; en error, clase concreta y `http_status`, con el mensaje aparte). Registra el commit del
+  código y las versiones de Python, numpy y pydantic (`generated_with`). `--check` regenera en
+  memoria y compara sin escribir. Sin `--commit`, se niega si `src/` difiere de `HEAD`.
+- `portal/examples/`: 12 casos de la 2.0 — seis de éxito (`ok`, `warning`, `error`; horizontal y
+  perfil; los cinco códigos de `checks`; solo el del Excel con fotogramas, D-57 (8)) y seis
+  `MainpipeTransientValidationError` 422, entre ellos el de migración por `density_kgm3` (U-40).
+  Generados desde el paquete instalado en un venv limpio de Python 3.12. Respecto a la lista del
+  plan se añade `solve-pn-superado`, para que `PN_EXCEEDED` (el aviso que gobierna la línea del
+  PN, D-63) tenga caso dorado.
+- `tests/test_examples.py`: los ejemplos son exactamente los casos del script, tienen el formato
+  de la plantilla, `solve()` los reproduce con `REL_TOL = 1e-9` (los de error, con la misma clase,
+  status y mensaje), cubren lo que pide `kit 04 §2` y cada lista en m, m.c.a. y L/s de los casos
+  de éxito es igual a su redondeo a 3 decimales (V-19 sobre los ejemplos, D-63 (6)).
+- `portal/INTEGRATION.md` desde la plantilla del portal, leído del código: firmas, entrada,
+  modelos, unidades, constantes ρ y g, excepciones, y lo que pide la fase 6 del plan — tamaño
+  (cifras, dos recetas, cota y aviso de 4,5 MB), precisión y regla de comparación, regla del rojo,
+  invariantes de la serie y cambios 1.0 → 2.0.
+- Desde el paquete instalado en un venv limpio (Python 3.12.10, numpy 2.5.5, pydantic 2.14.3):
+  suite en verde; ejemplos regenerados idénticos (también con numpy 2.5.4); mediciones de V-18
+  iguales a las de la fase 5 (receta 964 274 B, barrido 965 887 B, adversaria 2 819 475 B,
+  cota 3 285 874 B, petición 19 919 B; Excel 90 471 / 24 039 B); peor caso con fotogramas,
+  mediana 0.243 s.
+- Sin cambios en `src/`.
