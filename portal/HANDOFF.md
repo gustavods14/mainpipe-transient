@@ -85,3 +85,6 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   extremo de presión con empate de p/γ y H distinta en 1 ulp) y F4-03 (test de igualdad con el
   límite) corregidos; F4-01 (mensajes contradictorios por el redondeo a 1 decimal de U-26 cerca
   del umbral) **aceptado por el dueño**.
+- 2026-11-14: reverificación de la fase 4 sobre `60e19c1`: **pasa** (F4-02 y F4-03 cerrados, F4-01
+  aceptado). Menor nuevo F4-04 (sin test del empate de p/γ en el mínimo) cubierto con un test, sin
+  cambios en `src/`.

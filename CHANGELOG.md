@@ -88,3 +88,4 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   dan la misma presión, el extremo global publica el primer instante (U-25, F4-02); test de que una
   presión igual al límite no es cruce (F4-03). F4-01 (redondeo a 1 decimal de U-26 cerca del
   umbral: «-10.0 por debajo de -10.0», «100.0 %» sin superar el PN) aceptado por el dueño.
+  Test del mismo empate en el mínimo global (F4-04).

@@ -98,7 +98,28 @@ EQUAL_LIMIT_CASE = profile(
     closure_time_s=[0.0, 0.05],
     closure_flow_lps=[100.0, 0.0],
 )
-PROPERTY_CASES += [("f4-02-tie", TIE_CASE), ("f4-03-equal-limit", EQUAL_LIMIT_CASE)]
+# F4-04: the same tie on the minimum. At the vertex x = 444.954 m, p = H - z ties at steps 155,
+# 315 and 475 while H at step 155 is one ulp lower; U-25 asks for t = 1.55 s. Case s5-rand23
+# of the phase-4 reverification.
+MIN_TIE_CASE = profile(
+    [0.0, 79.969, 181.099, 245.039, 323.393, 444.954, 500.0],
+    [0.0, -3.4748182177556437, 21.178338131466013, 31.01524372045673, -3.878710106476934,
+     54.777384027393, -2.505818076104738],
+    wave_speed_ms=1250.0,
+    darcy_friction_factor=0.0,
+    reservoir_level_m=52.663473975976785,
+    closure_time_s=[0.0, 0.5, 1.0],
+    closure_flow_lps=[100.0, 10.797511596483291, 0.0],
+    n_reaches=40,
+    duration_s=5.8,
+    min_allowed_pressure_head_m=-10.33,
+    density_kgm3=1025.0,
+)
+PROPERTY_CASES += [
+    ("f4-02-tie", TIE_CASE),
+    ("f4-03-equal-limit", EQUAL_LIMIT_CASE),
+    ("f4-04-min-tie", MIN_TIE_CASE),
+]
 
 
 def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -543,6 +564,26 @@ def test_f402_global_pressure_extremes_follow_u25(name, data):
         assert out[f"pressure_head_{key}_global_x_m"] == x_m[j], name
     np.testing.assert_array_equal(out["pressure_head_max_m"], p.max(axis=0))
     np.testing.assert_array_equal(out["pressure_head_min_m"], p.min(axis=0))
+
+
+def test_f404_minimum_pressure_tie_takes_the_first_instant():
+    out = solve(MIN_TIE_CASE)
+    time_s, x_m, p = station_pressure_history(MIN_TIE_CASE)
+    j = out["x_m"].index(444.954)
+    assert p[155, j] == p[315, j] == p[475, j] == out["pressure_head_min_global_m"]
+    assert out["pressure_head_min_global_time_s"] == out["time_s"][155]
+    assert out["pressure_head_min_global_x_m"] == 444.954
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert (c["x_m"], c["time_s"]) == (444.954, out["time_s"][155])
+    # a real tie of p only: the head reaches its minimum one ulp lower at a later step
+    mesh = build_profile_mesh(
+        MIN_TIE_CASE["profile_x_m"], MIN_TIE_CASE["profile_z_m"], 40, 1250.0
+    )
+    q0 = 0.1
+    law = build_closure_law(MIN_TIE_CASE["closure_time_s"], [0.1, 0.010797511596483291, 0.0], q0)
+    pipe = PipeData(0.3, 1250.0, 0.0, q0, MIN_TIE_CASE["reservoir_level_m"], 9.81)
+    res = simulate(pipe, mesh, law, count_steps(5.8, mesh.dt_s))
+    assert res.head_min_step[j] == 315 and res.pressure_min_step[j] == 155
 
 
 def test_f403_pressure_equal_to_the_limit_is_not_a_crossing():
