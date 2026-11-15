@@ -17,7 +17,7 @@
 | 0 | Inicio | aprobada | 2026-11-14 | `portal/HANDOFF.md` | 3.0.0 |
 | 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.0 |
 | 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
-| 3 | Prototipo (G3) | reabierta | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
+| 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | pendiente | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
@@ -121,3 +121,10 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   y el aviso con las envolventes al milímetro (DR-7 (a); si el portal no la admite, envolventes de
   presión sin redondear y retoque de historias) y mantener min(1001, ⌊50 000 / n⌋) fotogramas
   (DR-9 (a), cierra F5-01).
+- 2026-11-15: G3 aprobada de nuevo con la enmienda: `portal/ui-spec.json` y
+  `portal/prototype.html` sin `density_kgm3` ni `gravity_ms2` en el formulario (ρ y g
+  constantes), curva p/γ del instante derivada en pantalla como `frame_head_m[k][j] −
+  elevation_m[j]` (DR-8), sin texto de fase (U-32, DR-10) y con la banda de redondeo de
+  ±0.0005 m entre el tramo rojo y los avisos, en la que manda el aviso (U-39, DR-7). Esquema
+  validado con jsonschema contra `06-ui-spec.schema.json` (kit 3.0.0). Siguiente:
+  `/hie-flow requests` para llevar DR-7 … DR-10 al portal.

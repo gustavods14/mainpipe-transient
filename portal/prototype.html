@@ -6,7 +6,8 @@
 <title>Golpe de ariete — wireframe</title>
 <!--
   PROTOTIPO DESECHABLE · mainpipe-transient · etapa 3 (G3) · nivel WIREFRAME
-  Kit de integración upstream: 3.0.0 · Fecha: 2026-11-14
+  Kit de integración upstream: 3.0.0 · Fecha: 2026-11-14 · enmienda 2026-11-15 (contrato 2.0:
+  sin ρ ni g, listas a 3 decimales, sin frame_pressure_head_m, sin texto de fase)
   Tokens: copiados literalmente de C:/Dev/web_apps/frontend/src/index.css
           (bloques :root —shell oscuro— y .theme-light —workspace—).
   Especificación que perdura: portal/ui-spec.json. Este HTML solo sirve para validar el uso.
@@ -450,7 +451,6 @@ table.data .inp { padding: 4px 6px; text-align: right; }
   .trans-grid .sec-label { grid-column: 1 / -1; }
 }
 .phase { font-size: 13px; color: var(--color-text-secondary); margin-top: 6px; }
-.trans-body > .phase:first-child { margin: 0 0 10px; }
 
 /* ── Estado y avisos (D-13: fill / onFill / edge / tint / text) ── */
 .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 13px; }
@@ -667,18 +667,6 @@ details.collap[open] .sum-k { display: none; }
           <input class="inp" id="min_allowed_pressure_head_m" inputmode="decimal" value="-10">
           <span class="unit">m.c.a.</span>        </div>
 
-        <div class="group-h">Fluido</div>
-        <div class="field">
-          <label for="density_kgm3">Densidad<span class="sym">ρ</span></label>
-          <input class="inp" id="density_kgm3" inputmode="decimal" value="1000">
-          <span class="unit">kg/m³</span>
-        </div>
-        <div class="field">
-          <label for="gravity_ms2">Gravedad<span class="sym">g</span></label>
-          <input class="inp" id="gravity_ms2" inputmode="decimal" value="9.81">
-          <span class="unit">m/s²</span>
-        </div>
-
         <div class="group-h">Malla de cálculo</div>
         <div class="field">
           <label for="n_reaches">Número de tramos<span class="sym">N</span></label>
@@ -795,7 +783,6 @@ details.collap[open] .sum-k { display: none; }
             </div>
           </div>
           <div class="panel-pad trans-body">
-            <div class="phase" id="phaseTxt" aria-live="off"></div>
             <div class="tabs trans-tabs" role="tablist" aria-label="Gráfico del transitorio" id="transTabs" hidden>
               <button class="tab" role="tab" data-fig="pnl-perfil" aria-selected="true">Altura H(x)</button>
               <button class="tab" role="tab" data-fig="pnl-presiones" aria-selected="false" tabindex="-1">Presión p/γ(x)</button>
@@ -837,7 +824,7 @@ details.collap[open] .sum-k { display: none; }
               </figure>
             </div>
             <div class="phase" id="strideNote" hidden></div>
-            <p class="err-note"><span class="proto-tag">prototipo</span> frame_stride = 1 en estos datos: la nota «Un fotograma cada N pasos de cálculo» no aparece. Rojo solo donde una envolvente cruza el PN o el límite (D-60): prueba PN = 20 bar o límite = −5 m.c.a.</p>
+            <p class="err-note"><span class="proto-tag">prototipo</span> frame_stride = 1 en estos datos: la nota «Un fotograma cada N pasos de cálculo» no aparece. Rojo solo donde una envolvente cruza el PN o el límite (D-60): prueba PN = 20 bar o límite = −5 m.c.a. Envolventes a 3 decimales (contrato 2.0): si el pico queda a 0.0005 m o menos del umbral, el rojo puede no coincidir con el aviso y manda el aviso.</p>
           </div>
         </div>
 
@@ -862,7 +849,7 @@ details.collap[open] .sum-k { display: none; }
             <dt>Δ<var>H</var></dt><dd>sobrepresión teórica en la válvula</dd><dd class="u">m</dd>
             <dt><var>a</var></dt><dd>celeridad de la onda</dd><dd class="u">m/s</dd>
             <dt><var>V</var><sub>0</sub></dt><dd>velocidad inicial = <var>Q</var><sub>0</sub>/<var>A</var></dd><dd class="u">m/s</dd>
-            <dt><var>g</var></dt><dd>aceleración de la gravedad</dd><dd class="u">m/s²</dd>
+            <dt><var>g</var></dt><dd>aceleración de la gravedad (fija: 9.81)</dd><dd class="u">m/s²</dd>
             <dt><var>L</var></dt><dd>longitud de la tubería</dd><dd class="u">m</dd>
             <dt><var>T</var><sub>c</sub></dt><dd>tiempo de cierre (primer instante con <var>Q</var> = 0)</dd><dd class="u">s</dd>
           </dl>
@@ -923,6 +910,7 @@ details.collap[open] .sum-k { display: none; }
    Solo reaccionan: nivel del depósito, cota / perfil, PN y límite de
    presión mínima (para que los avisos cambien al editar).
    ════════════════════════════════════════════════════════════════════ */
+const RHO = 1000, GRAV = 9.81;   // constantes del paquete, no datos de entrada (U-40)
 const L = 1000, A_WAVE = 1000, DH = 149.6, TC = 1.5, HF = 6.8, DT = 0.05, NSTEP = 400, NX = 20;
 const $ = (id) => document.getElementById(id);
 const num = (id) => parseFloat(($(id).value || '').replace(',', '.'));
@@ -986,7 +974,7 @@ function solveFake() {
     if (p < pmin.v) pmin = { v: p, x: xs[j], t: time[k] };
     if (!first && p < lim) first = { v: p, x: xs[j], t: time[k] };
   }));
-  const pnHead = num('pn_bar') * 1e5 / (num('density_kgm3') * num('gravity_ms2'));
+  const pnHead = num('pn_bar') * 1e5 / (RHO * GRAV);   // ρ y g fijos desde la 2.0 (U-40)
   const ratio = 100 * pmax.v / pnHead;
   const steadyMin = Math.min(...hr.map((h, j) => h - z[j]));
   const steadyX = xs[hr.map((h, j) => h - z[j]).indexOf(steadyMin)];
@@ -1003,8 +991,15 @@ function solveFake() {
   const jv = xs.indexOf(L), jm = xs.indexOf(L / 2);
   // lim y pnHead hacen de response.min_allowed_pressure_head_m (eco, U-35) y response.pn_head_m:
   // la pantalla dibuja con ellos, no con el formulario, que puede cambiar tras calcular.
-  R = { gen: ++GEN, xs, z, hr, frames, time, hmax, hmin, pmax, pmin, pnHead, ratio, checks, status, lim, jv, jm,
-        hValve: frames.map((f) => f[jv]), hMid: frames.map((f) => f[jm]) };
+  // Contrato 2.0 (U-39): las listas en m salen a 3 decimales, redondeadas una sola vez desde la
+  // precisión completa (p/γ = redondeo(H − z), no redondeo(H) − redondeo(z)); escalares, tiempos y
+  // avisos (calculados arriba) con precisión completa.
+  const r3 = (v) => Math.round(v * 1000) / 1000, r3a = (a) => a.map(r3);
+  const fr = frames.map(r3a);
+  R = { gen: ++GEN, xs, z: r3a(z), hr: r3a(hr), frames: fr, time, hmax: r3a(hmax), hmin: r3a(hmin),
+        pInit: r3a(hr.map((h, j) => h - z[j])), pMax: r3a(hmax.map((h, j) => h - z[j])), pMin: r3a(hmin.map((h, j) => h - z[j])),
+        pmax, pmin, pnHead, ratio, checks, status, lim, jv, jm,
+        hValve: fr.map((f) => f[jv]), hMid: fr.map((f) => f[jm]) };
 }
 
 /* ── Gráficos: ECharts 6.1.0 (opciones reutilizables por el portal) ── */
@@ -1082,7 +1077,8 @@ function vmarks() {
   return [[0, '--color-chart-series-3', 'depósito', 'left'], [L / 2, '--color-chart-series-2', 'L/2', 'center'], [L, '--color-chart-series-1', 'válvula', 'right']]
     .map(([x, tok, text, align]) => ({ xAxis: x, lineStyle: { color: css(tok), type: 'dotted', width: 1.5 }, label: Object.assign(lblStyle(lbl), { formatter: text, position: 'end', align }) }));
 }
-// Cruce de umbral en rojo (D-60), con el mismo predicado que los avisos danger (plan §1.5):
+// Cruce de umbral en rojo (D-60), con el mismo predicado que los avisos danger (plan §1.5), sobre
+// las envolventes a 3 decimales: a ≤ 0.0005 m del umbral puede discrepar del aviso y manda el aviso (U-36, DR-7).
 // punto en cada j que lo cumple y trazo hasta la j siguiente si también lo cumple. '-' = hueco.
 function crossing(id, name, xs, ys, pred) {
   const c = css('--color-chart-critical');
@@ -1121,13 +1117,13 @@ function buildResults() {
   ch('chProfile').setOption(o, true);
 
   // Presión p/γ(x)
-  const pMx = pr(R.hmax), pMn = pr(R.hmin), lbl = css('--color-chart-label'), op = css('--color-chart-operating');
+  const pMx = R.pMax, pMn = R.pMin, lbl = css('--color-chart-label'), op = css('--color-chart-operating');
   o = baseOpt(Object.assign({ xname: 'Progresiva x [m]', x1: L, yname: 'p/γ [m.c.a.]', yunit: 'm.c.a.', y: niceRange([pMx, pMn, [R.pnHead, R.lim]]) }, SP));
   o.series = [
     band(R.xs, pMn, pMx),
     line('emax', 'Envolvente máx.', R.xs, pMx, edge, { width: 1, z: 2 }),
     line('emin', 'Envolvente mín.', R.xs, pMn, edge, { width: 1, z: 2 }),
-    line('preg', 'Régimen', R.xs, pr(R.hr), reg, { width: 1.5, dash: true, extra: { markLine: markLine(vmarks().concat([
+    line('preg', 'Régimen', R.xs, R.pInit, reg, { width: 1.5, dash: true, extra: { markLine: markLine(vmarks().concat([
       hLine(R.pnHead, '--color-chart-label', `PN ${fmt(R.pnHead, 1)}`),
       hLine(R.lim, '--color-chart-label', `límite ${fmt(R.lim, 1)}`)])) } }),
     crossing('xpn', 'Cruce del PN', R.xs, pMx, (p) => p > R.pnHead),
@@ -1168,22 +1164,12 @@ function updateInstant() {
   $('tSlider').value = k;
   $('tSlider').setAttribute('aria-valuetext', `t = ${fmt(t, 2)} s`);
   $('tRead').textContent = `t = ${fmt(t, 2)} s`;
-  $('phaseTxt').textContent = phaseText(t);
 }
 function drawResults() {
   if (!R || $('r-result').hidden) return;
   const key = `${R.gen}|${timeMode}|${$('workspace').className}`;
   if (key !== builtKey) { buildResults(); builtKey = key; resizeVisible(); }
   updateInstant();
-}
-function phaseText(t) {
-  const ta = L / A_WAVE, cyc = Math.floor(t / (4 * ta)), tau = t - cyc * 4 * ta;
-  const c = cyc ? ` (ciclo ${cyc + 1})` : '';
-  if (t < TC && cyc === 0 && tau < ta) return `Cierre en curso: la onda de sobrepresión sale de la válvula hacia el depósito${c}.`;
-  if (tau < ta) return `La onda de sobrepresión viaja de la válvula al depósito${c}.`;
-  if (tau < 2 * ta) return `Reflexión en el depósito: la onda vuelve hacia la válvula y restituye la altura de régimen${c}.`;
-  if (tau < 3 * ta) return `Reflexión en la válvula cerrada: la onda de depresión viaja hacia el depósito${c}.`;
-  return `La depresión se refleja en el depósito y vuelve hacia la válvula${c}.`;
 }
 function renderStatic() {
   const badge = $('statusBadge');
@@ -1205,7 +1191,7 @@ function renderStatic() {
     kp('H máx. en la válvula', fmt(Math.max(...R.hValve), 1), 'm', `t = ${fmt(R.time[R.hValve.indexOf(Math.max(...R.hValve))], 2)} s`) +
     kp('H mín. en la válvula', fmt(Math.min(...R.hValve), 1), 'm', `t = ${fmt(R.time[R.hValve.indexOf(Math.min(...R.hValve))], 2)} s`);
   $('envCount').textContent = `${R.xs.length} progresivas`;
-  $('envBody').innerHTML =R.xs.map((x, j) => `<tr><td class="num">${fmt(x, 1)}</td><td class="num">${fmt(R.z[j], 2)}</td><td class="num">${fmt(R.hr[j], 2)}</td><td class="num">${fmt(R.hmax[j], 2)}</td><td class="num">${fmt(R.hmin[j], 2)}</td><td class="num">${fmt(R.hmax[j] - R.z[j], 2)}</td><td class="num">${fmt(R.hmin[j] - R.z[j], 2)}</td></tr>`).join('');
+  $('envBody').innerHTML =R.xs.map((x, j) => `<tr><td class="num">${fmt(x, 1)}</td><td class="num">${fmt(R.z[j], 2)}</td><td class="num">${fmt(R.hr[j], 2)}</td><td class="num">${fmt(R.hmax[j], 2)}</td><td class="num">${fmt(R.hmin[j], 2)}</td><td class="num">${fmt(R.pMax[j], 2)}</td><td class="num">${fmt(R.pMin[j], 2)}</td></tr>`).join('');
 }
 
 /* ── Tablas editables de entrada ── */

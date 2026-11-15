@@ -25,6 +25,10 @@
 > vuelve a borrador con `SCHEMA_VERSION` `"2.0"` propuesta. Lo que toca decisiones del portal sale
 > en **DR-7 … DR-10** (D-57 (9), D-57 (4), D-58). ρ y g fijos no se piden: los campos de entrada los
 > decide el upstream (regla central del kit; plan U-40). **DR-7, DR-8 y DR-9 bloquean la nueva G4.**
+> 2026-11-15: el portal resolvió DR-7 … DR-10 (D-63 … D-66, alternativa (a) en los cuatro; sin
+> commit en el portal al registrarlo). Ningún bloqueante abierto. D-63, D-64 y D-65 añaden
+> condiciones de verificación y D-66 retira U-32: obligan a enmendar el plan y `portal/ui-spec.json`
+> antes de re-congelar (ver «Pendiente tras D-63 … D-66» al final).
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|
@@ -34,10 +38,10 @@
 | DR-4 | ¿Se admite la asignación de colores del panel «Transitorio» con tokens existentes, sin escala de color por presión, incluidos cuatro usos que se apartan del rol documentado del token? | gráfico | no — integración | resuelto | D-60 |
 | DR-5 | ¿Cómo se muestran las fórmulas de Joukowsky y Michaud sin renderizador LaTeX? | dependencia | no — integración de la pantalla (etapa 3 aprobada) | resuelto | D-61 |
 | DR-6 | ¿Tiene la app análisis de IA? | IA | no | resuelto | D-62 |
-| DR-7 | ¿Admite el portal que el paquete entregue a 3 decimales las listas de salida en m y L/s, frente a «sin redondeo» de D-57 (9)? | funcionalidad | **sí** — precisión de la Capa 1 2.0 (G4) | abierto | — |
-| DR-8 | ¿Admite el portal retirar `frame_pressure_head_m` y que el panel derive p/γ(x, t) = `frame_head_m` − `elevation_m`, frente a las dos matrices de D-57 (4)? | funcionalidad | **sí** — forma de la Capa 1 2.0 (G4) | abierto | — |
-| DR-9 | Con una sola matriz `frame_*`, ¿qué tope de fotogramas rige? | funcionalidad | **sí** — tope de la Capa 1 y guarda de D-57 (2) (G4) | abierto | — |
-| DR-10 | ¿Acepta el portal que el panel «Transitorio» salga sin el texto de fase que aprobó D-58? | funcionalidad | no — pantalla; la Capa 1 no cambia | abierto | — |
+| DR-7 | ¿Admite el portal que el paquete entregue a 3 decimales las listas de salida en m y L/s, frente a «sin redondeo» de D-57 (9)? | funcionalidad | **sí** — precisión de la Capa 1 2.0 (G4) | resuelto | D-63 |
+| DR-8 | ¿Admite el portal retirar `frame_pressure_head_m` y que el panel derive p/γ(x, t) = `frame_head_m` − `elevation_m`, frente a las dos matrices de D-57 (4)? | funcionalidad | **sí** — forma de la Capa 1 2.0 (G4) | resuelto | D-64 |
+| DR-9 | Con una sola matriz `frame_*`, ¿qué tope de fotogramas rige? | funcionalidad | **sí** — tope de la Capa 1 y guarda de D-57 (2) (G4) | resuelto | D-65 |
+| DR-10 | ¿Acepta el portal que el panel «Transitorio» salga sin el texto de fase que aprobó D-58? | funcionalidad | no — pantalla; la Capa 1 no cambia | resuelto | D-66 |
 
 Dependencias entre los pedidos de la enmienda (2026-11-15): **DR-9 depende de DR-8**: solo tiene
 objeto si sale `frame_pressure_head_m` (DR-8 (a), (c) o (d)); con DR-8 (b) rige D-57 (4) tal cual.
@@ -380,10 +384,10 @@ sección `ai` de `ui-spec.json` y el panel de IA.
 
 | | |
 |---|---|
-| Estado | abierto |
+| Estado | resuelto |
 | Bloquea | **sí** — fija la precisión de la Capa 1 2.0 y lo que congelan los casos dorados (G4) |
 | Categoría | funcionalidad (tamaño de respuesta; el kit no tiene categoría propia, hallazgo en el plan §8) |
-| Decisión del portal | — |
+| Decisión del portal | D-63 — (a) listas en m, m.c.a. y L/s a 3 decimales, redondeadas por el paquete; el marcador del cruce y el extremo en `critical` se leen del aviso `danger` de `checks` (x_m, time_s, value_m) y el tramo rojo solo se dibuja si ese aviso existe (enmienda D-57 (9) y D-60 (1)) |
 
 **Contexto.** D-57 (9) dejó dicho: «Sin redondeo en el router […]. Bajar peso redondeando sería
 una enmienda de HU-4.1 aguas arriba, con su propio pedido». Este es ese pedido. La medición de la
@@ -450,10 +454,10 @@ todas, el router sigue sin transformar la respuesta.
 
 | | |
 |---|---|
-| Estado | abierto |
+| Estado | resuelto |
 | Bloquea | **sí** — forma de la Capa 1 2.0 (campo de salida retirado) |
 | Categoría | funcionalidad |
-| Decisión del portal | — |
+| Decisión del portal | D-64 — (a) sale `frame_pressure_head_m`; p/γ = `frame_head_m` − `elevation_m` en una función pura de `lib/mainpipe-transient/` con test contra `pressure_head_valve_m` (tolerancia 0.0015 m); `INTEGRATION.md` declara como contrato `frame_x_m == x_m` y p/γ = H − z (enmienda D-57 (4)) |
 
 **Contexto.** D-57 (4) dimensionó la película con **dos** matrices, H y p/γ («Con dos matrices (H y
 p/γ) es la fórmula de (a)»). La presión de cada fotograma es, por definición, la altura menos la
@@ -495,10 +499,10 @@ como en (a).
 
 | | |
 |---|---|
-| Estado | abierto |
+| Estado | resuelto |
 | Bloquea | **sí** — fija el tope de fotogramas de la Capa 1 (plan U-10) y la entrada de la guarda de D-57 (2) |
 | Categoría | funcionalidad (tamaño de respuesta) |
-| Decisión del portal | — |
+| Decisión del portal | D-65 — (a) tope min(1001, ⌊50 000 / n⌋) = 50 000 celdas en la única matriz; la guarda de D-57 (2) mide dos recetas (peor caso realista y magnitudes extremas), ambas ≤ 3,5 MB, y el techo vale para toda entrada solo con esa guarda en verde (enmienda D-57 (4), precisa D-57 (1)-(2)) |
 
 **Depende de DR-8**: solo tiene objeto si sale `frame_pressure_head_m` (DR-8 (a), (c) o (d)).
 
@@ -548,10 +552,10 @@ además, rangos nuevos en `SolveRequest`. La pantalla no cambia en ninguna (lee 
 
 | | |
 |---|---|
-| Estado | abierto |
+| Estado | resuelto |
 | Bloquea | no — pantalla; la Capa 1 no cambia |
 | Categoría | funcionalidad |
-| Decisión del portal | — |
+| Decisión del portal | D-66 — (a) sin texto de fase en v1; D-58 (4) queda sin efecto. Una guía de fase futura entraría como dato de la Capa 1, con su pedido |
 
 **Contexto.** D-58 (1) incluyó en el alcance del panel el «texto de fase» y D-58 (4) lo fijó como
 función pura en `lib/mainpipe-transient/`, con tests, a partir de `reflection_time_s`,
@@ -649,3 +653,19 @@ Lista original del portal:
 5. **D-61 (DR-5)** — referencia teórica: ΔH = a·V₀/g y ΔH = 2·L·V₀/(g·T_c) en HTML con
    `<var>`/`<sub>` y desglose de variables con unidades.
 6. **D-62 (DR-6)** — sección `ai` de `ui-spec.json` vacía o ausente; sin panel de IA.
+
+---
+
+## Pendiente tras D-63 … D-66 (antes de la nueva G4)
+
+Copiado de las decisiones del portal (2026-11-15). Estado: **pendiente**.
+
+| Punto | Qué | Dónde | Quién |
+|---|---|---|---|
+| D-63 (3)-(4) | Marcador del cruce y extremo en `critical` desde el aviso `danger` de `checks` (`x_m`, `time_s`, `value_m`); tramo rojo opcional sobre la envolvente redondeada, **solo si existe el aviso**. Nunca rojo sin aviso; el único desacuerdo admitido es aviso y marcador sin tramo a < 0.0005 m del umbral | plan §1.5, U-36, V-13; frase del predicado en `ui-spec.json` y `prototype.html` | `hie-architect`, `hie-prototyper` |
+| D-63 (5) | Regla de precisión y de comparación (redondear el escalar a 3 decimales o tolerancia 0.0005 m) | `portal/INTEGRATION.md` (fase 6) | `hie-api` |
+| D-63 (6) | Los casos dorados congelan los valores redondeados | fase 5 | `hie-api` |
+| D-64 (3) | Declarar como contrato `frame_x_m == x_m` y p/γ(x_j, t_k) = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota z que `pressure_head_*`; mantenerlo probado (`tests/test_frames.py`) | plan §1.4; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` |
+| D-65 (3)-(4) | Medir dos recetas (peor caso realista y magnitudes extremas, ≈ 25 B por número), ambas ≤ 3 500 000 B; publicar cota absoluta y las dos cifras medidas | plan U-34 / §2; fase 5; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` |
+| D-66 | Retirar U-32 (texto de fase) | plan; `ui-spec.json` ya lo retiró en G3 | `hie-architect` |
+| Opcional | `frame_x_m` repite `x_m` (≈ 5 kB); el portal sugiere que podría quitarse. No registrado como decisión | plan, si el dueño lo quiere | dueño |
