@@ -8,6 +8,13 @@
 > error 422 cuando la duración pedida con la malla elegida supera el tope de pasos de cálculo (la
 > cifra del tope la fija el plan, U-09). Etapa 1 reabierta para esta enmienda.
 >
+> Enmienda 2026-11-14 (restaura HU-1.7; hallazgo F1-01 de `doc/verification/02-fase-1.md`,
+> decisión del dueño): se añade al final HU-1.7 (malla y duración configurables), que la épica
+> (decisión P5 y pregunta 3), el plan 01 (§1.3, fases 1 y 2), `doc/DECISIONS.md` (U-08, U-09) y
+> HU-1.6 crit. 13 ya citaban y que faltaba en este archivo. No cambia el alcance: recoge la
+> decisión P5 de G1, la tabla de entradas de este archivo y lo que el plan fijó (U-08, U-09,
+> D-57). Los errores de N y de la duración siguen en HU-1.6 (crits. 9, 10 y 13).
+>
 > **Método**: Método de las Características en H y Q, malla con número de Courant = 1
 > (Δx = L/N, Δt = Δx/a), fricción de Darcy-Weisbach con f constante. Contornos: depósito de nivel
 > constante (H = H_dep) aguas arriba; caudal impuesto Q(t) en la válvula aguas abajo. Régimen
@@ -190,3 +197,53 @@ resultado calculado.
     `n_reaches`, da en s la duración máxima admisible con esa malla (tope de pasos × `dt_s`) e
     indica que se puede acortar la duración o usar una malla más gruesa; y con `duration_s` igual a
     esa duración máxima el cálculo se resuelve sin error. *(Añadido 2026-11-14, D-57.)*
+
+## HU-1.7 — Elegir la malla de cálculo y la duración de la simulación
+
+**Como** proyectista, **quiero** fijar el número de tramos de la malla y la duración de la
+simulación, o aceptar sus valores por defecto, **para** comprobar que el resultado no depende de
+la malla y que la simulación cubre el cierre completo y los ciclos de la onda que necesito para
+juzgar la maniobra.
+
+Origen: decisión P5 de G1 (`00-epica.md`): N configurable, 20 por defecto, y duración como dato
+de entrada. *(Restaurada 2026-11-14, F1-01.)*
+
+La malla mantiene el número de Courant = 1 (ver «Método»): Δx = L/N y Δt = Δx/a = L/(N·a).
+`n_reaches` (N) es un entero par entre 10 y 200, 20 por defecto, para que x = L/2 sea nodo (tabla
+de entradas). `duration_s` (T) vale por defecto Tc + 5·(4L/a): el cierre más cinco periodos de la
+onda. Los rangos y el tope de pasos los fija el plan (U-09; tope de 10 000 pasos, D-57).
+
+Las entradas fuera de rango son **errores** ya descritos en HU-1.6 y no se repiten aquí: N impar o
+fuera de 10–200 (crit. 9), duración menor que Tc + 2L/a (crit. 10) y número de pasos por encima del
+tope, también con la duración por defecto (crit. 13). Elegir N o T no genera avisos en `checks`: la
+malla y la duración no dan lugar a ningún resultado no conforme.
+
+**Criterios de aceptación** (caso del Excel: L = 1000 m, a = 1000 m/s)
+
+1. **Malla.** Dado el caso del Excel con `n_reaches` = 20, cuando se calcula, entonces
+   `dx_m` = 50 y `dt_s` = 0.05, y con geometría `horizontal` `x_m` tiene N + 1 = 21 progresivas,
+   de 0 a 1000 m cada 50 m (la última es 1000 exacto). Con `n_reaches` = 40, `dx_m` = 25,
+   `dt_s` = 0.025 y hay 41 progresivas. La respuesta devuelve el `n_reaches` usado y, si la
+   entrada no lo trae, se usa 20.
+2. **Punto medio e independencia de la malla.** Dado cualquier `n_reaches` admitido (p. ej. 20 o
+   40), entonces x = L/2 = 500 m es un nodo de cálculo (el N/2) y `head_midpoint_m` es la altura
+   de ese nodo, sin interpolar. Dado el caso sin fricción de HU-1.1 crit. 3, calculado con
+   `n_reaches` = 20 y con `n_reaches` = 40, entonces `head_valve_max_m` = 244.21 ± 0.01 m en los
+   dos casos (Joukowsky): el resultado no depende de la malla.
+3. **Duración por defecto.** Dado el caso del Excel sin `duration_s`, cuando se calcula, entonces
+   la duración es Tc + 5·(4L/a) = 1.5 + 5·4.0 = 21.5 s, con `n_steps` = 430 y `duration_s` = 21.5
+   en la respuesta. La duración por defecto no se recorta para que quepa en el tope de pasos: si no
+   cabe, se aplica el error 422 de HU-1.6 crit. 13.
+4. **Número de pasos y duración efectiva.** Dados `duration_s` = T y `dt_s` = Δt, entonces
+   `n_steps` = ⌈T/Δt − 10⁻⁹⌉ (la tolerancia absorbe el redondeo de coma flotante) y la
+   `duration_s` devuelta es la duración efectiva, `n_steps`·`dt_s`. Caso del Excel con
+   `n_reaches` = 20: `duration_s` = 20 da `n_steps` = 400 (no 401) y `duration_s` = 20;
+   `duration_s` = 20.01 da `n_steps` = 401 y `duration_s` = 20.05 (el paso que completa la
+   duración pedida).
+5. **Tiempo de cálculo con la malla más fina.** Dado el caso más grande que admiten los rangos,
+   `n_reaches` = 200 con la duración máxima del tope de pasos (caso del Excel: `dt_s` = 0.005 s,
+   `duration_s` = 50 s, `n_steps` = 10 000), cuando se llama a `solve`, entonces el cálculo se
+   resuelve sin error y el tiempo de cálculo es < 1 s medido en el upstream (`kit 01 §6`). El peor
+   caso exacto de la medición (geometría, vértices del perfil, fotogramas) y el objetivo interno
+   los fija el plan (V-16).
+6. Entregable `portal/` completo según el kit v3.0.0.

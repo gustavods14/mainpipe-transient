@@ -76,11 +76,13 @@ def _allievi_valve_head(case, n_steps: int) -> np.ndarray:
     q0 = case.initial_flow_lps / 1000.0
     area = math.pi * (case.inner_diameter_mm / 1000.0) ** 2 / 4
     b = case.wave_speed_ms / (case.gravity_ms2 * area)
-    law = build_closure_law(case.closure_time_s, [q / 1000 for q in case.closure_flow_lps], q0)
+    # Closure law evaluated independently of the package (np.interp, constant after the end).
+    law_t = np.array(case.closure_time_s)
+    law_q = np.array(case.closure_flow_lps) / 1000.0
     dt = case.length_m / case.n_reaches / case.wave_speed_ms
     lag = 2 * case.n_reaches  # 2L/a in steps
     h_dep = case.reservoir_level_m
-    q = [q0] + [law.flow_at(k * dt) for k in range(1, n_steps + 1)]
+    q = [q0] + [float(np.interp(k * dt, law_t, law_q)) for k in range(1, n_steps + 1)]
     h = [h_dep]
     for k in range(1, n_steps + 1):
         if k - lag <= 0:
@@ -296,6 +298,33 @@ def test_hu14_midpoint_and_valve_pressure():
     assert res.mesh.x_m[res.mesh.midpoint_index] == 500.0
     np.testing.assert_array_equal(res.head_midpoint_m, rec.head_m[:, 10])
     np.testing.assert_array_equal(res.pressure_head_valve_m, res.head_valve_m - 50.0)
+
+
+@pytest.mark.parametrize("n_reaches, dx, dt", [(20, 50.0, 0.05), (40, 25.0, 0.025)])
+def test_hu17_crit1_crit2_mesh(n_reaches, dx, dt):
+    """HU-1.7 crit. 1-2: dx = L/N, dt = dx/a, N + 1 stations ending at L exactly, L/2 is node N/2."""
+    rec = Recorder()
+    res = run(EXCEL.with_(n_reaches=n_reaches), rec)
+    assert res.mesh.n_reaches == n_reaches
+    assert res.mesh.dx_m == dx
+    assert res.mesh.dt_s == dt
+    assert res.mesh.x_m.shape == (n_reaches + 1,)
+    np.testing.assert_allclose(res.mesh.x_m, dx * np.arange(n_reaches + 1), rtol=0, atol=1e-12)
+    assert res.mesh.x_m[-1] == 1000.0
+    assert res.mesh.midpoint_index == n_reaches // 2
+    assert res.mesh.x_m[res.mesh.midpoint_index] == 500.0
+    np.testing.assert_array_equal(res.head_midpoint_m, rec.head_m[:, n_reaches // 2])
+
+
+def test_hu17_crit4_effective_duration():
+    """HU-1.7 crit. 4: 20 s -> 400 steps (not 401); 20.01 s -> 401 steps and 20.05 s effective."""
+    res = run(EXCEL.with_(duration_s=20.0))
+    assert res.n_steps == 400
+    assert res.duration_s == 20.0
+    res = run(EXCEL.with_(duration_s=20.01))
+    assert res.n_steps == 401
+    assert res.duration_s == pytest.approx(20.05, abs=1e-12)
+    assert res.time_s[-1] == res.duration_s
 
 
 def test_default_duration_and_step_count():

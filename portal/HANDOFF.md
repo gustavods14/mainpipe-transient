@@ -60,3 +60,9 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   entregada en `905e53a` y verificada por `hie-verifier`: **pasa**
   (`doc/verification/01-fase-0.md`). Menores: F0-01 y F0-02 aceptados por el dueño; F0-03
   (este estado) corregido.
+- 2026-11-14: fase 1 entregada en `9d1d9b4`; `hie-verifier` **no pasa** solo por F1-01 (faltaba
+  HU-1.7, `doc/verification/02-fase-1.md`). `hie-product-owner` restaura HU-1.7 sin cambiar el
+  alcance y G1 se aprueba de nuevo con ella: el dueño acepta el crit. 4 (`duration_s` devuelta =
+  duración efectiva, 20.01 → 20.05 s) y que el crit. 5 (< 1 s con N = 200 y 10 000 pasos) se
+  mide en la fase 2. Tests de HU-1.7 crit. 1, 2 y 4 añadidos y F1-03 corregido (referencia de
+  Allievi con interpolación propia). F1-02 pasa a la fase 2. Pendiente: reverificar la fase 1.
