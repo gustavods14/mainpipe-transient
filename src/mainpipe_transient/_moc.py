@@ -10,8 +10,9 @@ Scheme (identical to the Excel sheet ``2_Malla_MOC``, U-02)::
 
 with B = a/(g*A) and R = f*dx/(2*g*D*A^2). The elevation never enters H or Q (M13);
 it only gives the pressure head p/gamma = H - z. Envelopes and extremes are accumulated
-over every step on the output stations (nodes plus profile vertices, M14, U-07); the full
-H/Q history is never stored (U-19).
+over every step on the output stations (nodes plus profile vertices, M14, U-07), together
+with the first crossing of the minimum allowed pressure head; the full H/Q history is never
+stored (U-19).
 
 All quantities are SI (m, s, m3/s).
 """
@@ -102,6 +103,10 @@ class MocResult:
     head_min_m: np.ndarray
     head_max_step: np.ndarray  # first step reaching the station maximum
     head_min_step: np.ndarray  # first step reaching the station minimum
+    # first crossing below the pressure limit (U-25); None if never crossed or no limit given
+    first_below_step: int | None = None
+    first_below_station: int | None = None
+    first_below_pressure_m: float | None = None
 
     @property
     def duration_s(self) -> float:
@@ -138,6 +143,23 @@ class MocResult:
         k = int(np.argmin(self.head_valve_m))
         return float(self.head_valve_m[k]), float(self.time_s[k])
 
+    def pressure_head_initial_min(self) -> Extreme:
+        """Lowest steady-state pressure head (t = 0); ties go to the lower x (U-25)."""
+        p = self.pressure_head_initial_m
+        j = int(np.argmin(p))  # stations are sorted by x: first occurrence = lower x
+        return Extreme(value_m=float(p[j]), x_m=float(self.mesh.station_x_m[j]), time_s=0.0)
+
+    def first_below_limit(self) -> Extreme | None:
+        """First crossing below the pressure limit given to :func:`simulate` (U-25)."""
+        if self.first_below_step is None or self.first_below_station is None:
+            return None
+        assert self.first_below_pressure_m is not None
+        return Extreme(
+            value_m=self.first_below_pressure_m,
+            x_m=float(self.mesh.station_x_m[self.first_below_station]),
+            time_s=float(self.time_s[self.first_below_step]),
+        )
+
     def pressure_head_max_global(self) -> Extreme:
         return self._global_extreme(self.pressure_head_max_m, self.head_max_step, np.max)
 
@@ -164,12 +186,19 @@ def simulate(
     law: ClosureLaw,
     n_steps: int,
     observer: StepObserver | None = None,
+    pressure_limit_m: float | None = None,
 ) -> MocResult:
     """Run the MOC from the steady state for ``n_steps`` time steps.
 
     ``observer(k, H, Q)``, if given, is called for k = 0 .. n_steps with the node
     arrays of step k. The arrays are reused buffers: copy them to keep them.
     Envelopes are taken on ``mesh.station_x_m`` (M14).
+
+    ``pressure_limit_m``, if given, records the first step (k = 0 included) at which some
+    station has a pressure head strictly below it and, among those stations, the one with
+    the lowest pressure head, then the lower x (U-25). The pressure head is computed as
+    ``station head - station elevation``, the same float operation as the envelopes, so a
+    crossing is recorded if and only if ``min(pressure_head_min_m) < pressure_limit_m``.
     """
     der = derive(pipe, mesh)
     b, r = der.wave_constant, der.friction_constant
@@ -183,6 +212,21 @@ def simulate(
     head = h_dep - der.head_loss_m * mesh.x_m / mesh.length_m
     flow = np.full(n + 1, q0)
     head_initial = mesh.station_head(head).copy()
+    station_z = mesh.station_elevation_m
+
+    first_step: int | None = None
+    first_station: int | None = None
+    first_pressure: float | None = None
+
+    def look_for_crossing(k: int, st_head: np.ndarray) -> None:
+        nonlocal first_step, first_station, first_pressure
+        pressure = st_head - station_z
+        j = int(np.argmin(pressure))  # lowest pressure; first occurrence = lower x
+        if pressure[j] < pressure_limit_m:
+            first_step, first_station, first_pressure = k, j, float(pressure[j])
+
+    if pressure_limit_m is not None:
+        look_for_crossing(0, head_initial)
 
     time_s = np.arange(n_steps + 1, dtype=float) * dt  # k*dt, not a running sum (U-08)
     head_valve = np.empty(n_steps + 1)
@@ -233,6 +277,8 @@ def simulate(
         if lower.any():
             head_min[lower] = st_head[lower]
             head_min_step[lower] = k
+            if pressure_limit_m is not None and first_step is None:
+                look_for_crossing(k, st_head)
 
         head_valve[k] = head[n]
         head_mid[k] = head[mid]
@@ -255,4 +301,7 @@ def simulate(
         head_min_m=head_min,
         head_max_step=head_max_step,
         head_min_step=head_min_step,
+        first_below_step=first_step,
+        first_below_station=first_station,
+        first_below_pressure_m=first_pressure,
     )

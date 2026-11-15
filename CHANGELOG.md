@@ -65,3 +65,21 @@ Contrato objetivo: `SCHEMA_VERSION = "1.0"` (plan `doc/plans/01-golpe-ariete-v1.
   presión en un vértice fuera de nodo (F3-01); el mensaje de progresiva no creciente añade la
   posición desde 1, «x[3] = 120 m (punto 4)…» (F3-03). F3-02 (dos vértices fundidos en el mismo
   nodo) aceptado por el dueño.
+
+### Fase 4 — verificaciones
+
+- `_checks`: los cinco avisos del plan §1.5 con `code`, `severity`, mensaje en español y
+  localización (`value_m`, `limit_m`, `x_m`, `time_s`). `PN_EXCEEDED` (p_max > PN en m.c.a.) y
+  `PN_NEAR_LIMIT` (80 % < p_max/PN, U-16); `COLUMN_SEPARATION_RISK` (p_min < límite) y
+  `SUBATMOSPHERIC_PRESSURE` (límite ≤ p_min < 0); `STEADY_NEGATIVE_PRESSURE` (presión de régimen
+  < 0, `error` si además < límite). Orden: errores y después avisos, en el orden de la tabla.
+  `status` = la severidad más alta, `ok` sin avisos (HU-3.5).
+- Primer cruce del límite (`first_x_m`, `first_time_s`, `first_pressure_head_m`) acumulado dentro
+  del bucle MOC desde t = 0 (U-19): primer paso con alguna progresiva bajo el límite y, entre
+  ellas, la de menor presión y después la de menor x (U-25). El mensaje de
+  `COLUMN_SEPARATION_RISK` da la presión, el lugar y el instante de ese primer cruce.
+- Mensajes literales de HU-3.1 crit. 4 y HU-3.2 crit. 4 con el signo menos ASCII (U-26). Una
+  depresión que redondea a cero se escribe `-0.0` para no contradecir el aviso.
+- Verificación de `_theory` contra `4_Validacion` (V-11) y del predicado por progresiva de D-60
+  (V-13). La comparación con Joukowsky / Michaud no genera avisos (HU-3.4).
+- Sin cambio de forma del contrato (`SCHEMA_VERSION` sigue en `"1.0"`).

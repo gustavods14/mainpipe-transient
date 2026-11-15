@@ -1,8 +1,7 @@
 """Orchestration of :func:`solve` and the error wrapper (plan 01 §1.1, kit 01 §3, kit 02 §1).
 
-Plan phases 2-3: horizontal and profile geometry. Still pending by plan phase:
-``checks`` (phase 4; until then the list is empty and ``status`` is derived from it)
-and the player frames (phase 5; ``frame_*`` are null until then).
+Plan phases 2-4: horizontal and profile geometry, checks and status. Still pending by
+plan phase: the player frames (phase 5; ``frame_*`` are null until then).
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from typing import Any
 import numpy as np
 from pydantic import ValidationError
 
+from ._checks import build_checks, status_of
 from ._closure import build_closure_law
 from ._geometry import (
     Mesh,
@@ -28,7 +28,7 @@ from .exceptions import (
     MainpipeTransientError,
     MainpipeTransientValidationError,
 )
-from .schemas import SCHEMA_VERSION, Check, SolveRequest, SolveResponse
+from .schemas import SCHEMA_VERSION, SolveRequest, SolveResponse
 
 logger = logging.getLogger("mainpipe_transient")
 
@@ -36,7 +36,6 @@ __all__ = ["solve"]
 
 _LPS_PER_M3S = 1000.0
 _MM_PER_M = 1000.0
-_SEVERITY_RANK = {"warning": 1, "error": 2}
 
 _UNEXPECTED_MESSAGE = (
     "Error interno inesperado durante el cálculo del transitorio. Los datos de entrada "
@@ -90,7 +89,13 @@ def _compute(req: SolveRequest) -> SolveResponse:
         reservoir_level_m=req.reservoir_level_m,
         gravity_ms2=req.gravity_ms2,
     )
-    res = simulate(pipe, mesh, law, count_steps(duration, mesh.dt_s))
+    res = simulate(
+        pipe,
+        mesh,
+        law,
+        count_steps(duration, mesh.dt_s),
+        pressure_limit_m=req.min_allowed_pressure_head_m,
+    )
     der = res.derived
 
     h_vmax, t_vmax = res.head_valve_max()
@@ -98,6 +103,7 @@ def _compute(req: SolveRequest) -> SolveResponse:
     p_max = res.pressure_head_max_global()
     p_min = res.pressure_head_min_global()
     pn_head = req.pn_bar * 1e5 / (req.density_kgm3 * req.gravity_ms2)
+    pn_ratio_pct = 100.0 * p_max.value_m / pn_head
     th = theory(
         length_m=mesh.length_m,
         wave_speed_ms=req.wave_speed_ms,
@@ -107,13 +113,22 @@ def _compute(req: SolveRequest) -> SolveResponse:
         head_valve_initial_m=float(res.head_valve_m[0]),
         head_valve_max_m=h_vmax,
     )
-    checks: list[Check] = []  # plan phase 4
+    checks = build_checks(
+        pressure_max=p_max,
+        pressure_min=p_min,
+        steady_min=res.pressure_head_initial_min(),
+        first_below_limit=res.first_below_limit(),
+        pn_bar=req.pn_bar,
+        pn_head_m=pn_head,
+        pn_ratio_pct=pn_ratio_pct,
+        min_allowed_m=req.min_allowed_pressure_head_m,
+    )
 
     return SolveResponse(
         schema_version=SCHEMA_VERSION,
         scenario=req.scenario,
         geometry=req.geometry,
-        status=_status(checks),
+        status=status_of(checks),
         checks=checks,
         length_m=mesh.length_m,
         area_m2=der.area_m2,
@@ -155,7 +170,7 @@ def _compute(req: SolveRequest) -> SolveResponse:
         pressure_head_min_global_x_m=p_min.x_m,
         pressure_head_min_global_time_s=p_min.time_s,
         pn_head_m=pn_head,
-        pressure_max_pn_ratio_pct=100.0 * p_max.value_m / pn_head,
+        pressure_max_pn_ratio_pct=pn_ratio_pct,
         min_allowed_pressure_head_m=req.min_allowed_pressure_head_m,
         maneuver_type=th.maneuver_type,
         joukowsky_head_rise_m=th.joukowsky_head_rise_m,
@@ -183,12 +198,6 @@ def _build_mesh(req: SolveRequest) -> Mesh:
 
 def _floats(values: np.ndarray) -> list[float]:
     return values.astype(float).tolist()
-
-
-def _status(checks: list[Check]) -> str:
-    if not checks:
-        return "ok"
-    return max((c.severity for c in checks), key=_SEVERITY_RANK.__getitem__)
 
 
 # ------------------------------------------------------------------ validation messages

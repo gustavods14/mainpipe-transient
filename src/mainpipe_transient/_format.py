@@ -13,6 +13,7 @@ __all__ = [
     "fmt_fixed",
     "fmt_trim",
     "fmt_head",
+    "fmt_pressure",
     "fmt_x",
     "fmt_time",
     "fmt_pn",
@@ -51,6 +52,18 @@ def fmt_trim(value: float, max_decimals: int) -> str:
 
 def fmt_head(value: float) -> str:
     return fmt_fixed(value, 1)
+
+
+def fmt_pressure(value: float) -> str:
+    """Pressure head with one decimal that keeps the sign of a small negative value.
+
+    A depression of -0.04 m would print as ``0.0`` with :func:`fmt_head`; in a warning
+    about negative pressure that reads as a contradiction, so it prints ``-0.0``.
+    """
+    text = fmt_head(value)
+    if value < 0.0 and text == "0.0":
+        return "-0.0"
+    return text
 
 
 def fmt_x(value: float) -> str:

@@ -1,0 +1,469 @@
+"""Phase 4 of plan 01: theory reference, checks, status and messages.
+
+Covers HU-3.1 ... HU-3.5 and V-11, V-12, V-13 (plan 01 §1.5, §6; U-16, U-17, U-20,
+U-25, U-26, U-36). «Caso Excel» and «caso sin fricción» as in plan 01 §6 and HU-1.1.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+
+import numpy as np
+import pytest
+
+from mainpipe_transient import solve
+from mainpipe_transient._checks import PN_NEAR_LIMIT_PCT, build_checks
+from mainpipe_transient._format import fmt_pressure
+from mainpipe_transient._geometry import build_horizontal_mesh, build_profile_mesh
+from mainpipe_transient._moc import Extreme
+
+from test_profile import GENERIC_X, GENERIC_Z, LOMA_X, LOMA_Z, horizontal, nodal_history, profile
+
+REL = 1e-9  # U-29 for derived magnitudes against the Excel reference (V-11)
+
+
+def frictionless(**changes) -> dict:
+    """HU-1.1 crit. 3: f = 0, closure in one step, horizontal at z = 0, T = 5 s."""
+    base = dict(
+        darcy_friction_factor=0.0,
+        duration_s=5.0,
+        closure_time_s=[0.0, 0.05],
+        closure_flow_lps=[100.0, 0.0],
+    )
+    base.update(changes)
+    return horizontal(**base)
+
+
+def codes(out: dict) -> list[str]:
+    return [c["code"] for c in out["checks"]]
+
+
+def check(out: dict, code: str) -> dict:
+    found = [c for c in out["checks"] if c["code"] == code]
+    assert len(found) == 1, (code, codes(out))
+    return found[0]
+
+
+def validation(excel_reference) -> dict:
+    return {c: e["value"] for c, e in excel_reference["validation"].items()}
+
+
+# Cases used by the cross-cutting properties (HU-3.2 crit. 2, V-13). Each is
+# (name, input); the profile ones exercise stations that are not nodes.
+STEADY_X = [0.0, 300.0, 1000.0]
+PROPERTY_CASES = [
+    ("excel", horizontal()),
+    ("frictionless", frictionless()),
+    ("frictionless-136", frictionless(reservoir_level_m=136.0)),
+    ("frictionless-150", frictionless(reservoir_level_m=150.0, pn_bar=40.0)),
+    ("loma", profile(LOMA_X, LOMA_Z)),
+    ("generic-profile", profile(GENERIC_X, GENERIC_Z)),
+    ("vertex-520", profile([0.0, 520.0, 1250.0], [0.0, 40.0, 0.0])),
+    ("steady-98", profile(STEADY_X, [0.0, 98.0, 0.0])),
+    ("steady-110", profile(STEADY_X, [0.0, 110.0, 0.0])),
+    ("limit-7", frictionless(reservoir_level_m=136.0, min_allowed_pressure_head_m=-7.0)),
+    ("pn-20", frictionless(pn_bar=20.0)),
+]
+
+
+def station_pressure_history(data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """(time_s, x_m, p[k][j]) on every output station and step, via the internal API."""
+    if data["geometry"] == "profile":
+        mesh = build_profile_mesh(
+            data["profile_x_m"], data["profile_z_m"], data["n_reaches"], data["wave_speed_ms"]
+        )
+    else:
+        mesh = build_horizontal_mesh(
+            data["length_m"], data["n_reaches"], data["wave_speed_ms"], data["pipe_elevation_m"]
+        )
+    heads, _, res = nodal_history(mesh, data)
+    pressure = np.array([mesh.station_head(h) for h in heads]) - mesh.station_elevation_m
+    return res.time_s, mesh.station_x_m, pressure
+
+
+# --------------------------------------------------------------------------- HU-3.1 / V-12
+def test_hu31_crit1_pn_head():
+    out = solve(horizontal(pn_bar=25.0))
+    assert out["pn_head_m"] == pytest.approx(254.84, abs=0.01)
+
+
+def test_hu31_crit2_ratio_and_near_limit():
+    out = solve(frictionless(pn_bar=25.0))
+    assert out["pressure_head_max_global_m"] == pytest.approx(244.21, abs=0.01)
+    assert out["pressure_max_pn_ratio_pct"] == pytest.approx(95.8, abs=0.1)
+    c = check(out, "PN_NEAR_LIMIT")
+    assert c["severity"] == "warning"
+    assert c["value_m"] == out["pressure_head_max_global_m"]
+    assert c["limit_m"] == out["pn_head_m"]
+    assert (c["x_m"], c["time_s"]) == (
+        out["pressure_head_max_global_x_m"],
+        out["pressure_head_max_global_time_s"],
+    )
+    assert "PN_EXCEEDED" not in codes(out)
+
+
+def test_hu31_crit3_exceeded_and_no_pn_check():
+    out20 = solve(frictionless(pn_bar=20.0))
+    assert out20["pn_head_m"] == pytest.approx(203.87, abs=0.01)
+    assert check(out20, "PN_EXCEEDED")["severity"] == "error"
+    assert "PN_NEAR_LIMIT" not in codes(out20)
+    out40 = solve(frictionless(pn_bar=40.0))
+    assert not {"PN_EXCEEDED", "PN_NEAR_LIMIT"} & set(codes(out40))
+
+
+def test_hu31_crit4_exceeded_message_is_literal():
+    c = check(solve(frictionless(pn_bar=20.0)), "PN_EXCEEDED")
+    assert c["message"] == (
+        "La presión máxima (244.2 m.c.a. en x = 1000 m, t = 0.05 s) supera el PN 20 bar "
+        "(203.9 m.c.a.). Aumente la clase de la tubería o alargue el cierre."
+    )
+    assert c["first_x_m"] is None and c["first_time_s"] is None
+    assert c["first_pressure_head_m"] is None
+
+
+def test_v12_pn_with_other_density_and_gravity():
+    out = solve(horizontal(pn_bar=16.0, density_kgm3=1025.0, gravity_ms2=9.78))
+    assert out["pn_head_m"] == pytest.approx(16e5 / (1025.0 * 9.78), abs=0.01)
+    assert out["pressure_max_pn_ratio_pct"] == pytest.approx(
+        100 * out["pressure_head_max_global_m"] / out["pn_head_m"], rel=1e-3
+    )
+
+
+# --------------------------------------------------------------------------- HU-3.2
+def test_hu32_crit1_excel_column_separation_and_full_result():
+    out = solve(horizontal())
+    assert out["pressure_head_min_global_m"] == pytest.approx(-37.9, abs=0.05)
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert c["severity"] == "error"
+    assert out["status"] == "error"
+    assert c["value_m"] == out["pressure_head_min_global_m"]
+    assert c["limit_m"] == -10.0
+    assert (c["x_m"], c["time_s"]) == (
+        out["pressure_head_min_global_x_m"],
+        out["pressure_head_min_global_time_s"],
+    )
+    # computed and returned in full, not a 422
+    assert len(out["time_s"]) == out["n_steps"] + 1 == 401
+    assert len(out["pressure_head_min_m"]) == len(out["x_m"]) == 21
+
+
+@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
+def test_hu32_crit2_first_crossing_is_the_first(name, data):
+    """first_* lie on the grid, are below the limit, nothing earlier is (U-25)."""
+    out = solve(data)
+    limit = out["min_allowed_pressure_head_m"]
+    time_s, x_m, p = station_pressure_history(data)
+    below = p < limit
+    if "COLUMN_SEPARATION_RISK" not in codes(out):
+        assert not below.any(), name
+        return
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert c["first_x_m"] in out["x_m"]
+    assert c["first_time_s"] in out["time_s"]
+    k = out["time_s"].index(c["first_time_s"])
+    j = out["x_m"].index(c["first_x_m"])
+    assert c["first_pressure_head_m"] == p[k, j]
+    assert c["first_pressure_head_m"] < limit
+    assert not below[:k].any()
+    # U-25: among the stations below the limit at that step, the lowest pressure, then lower x
+    assert p[k, j] == p[k].min()
+    assert j == int(np.flatnonzero(p[k] == p[k].min())[0])
+    np.testing.assert_array_equal(time_s, out["time_s"])
+    np.testing.assert_array_equal(x_m, out["x_m"])
+
+
+def test_hu32_crit3_frictionless_first_crossing():
+    c = check(solve(frictionless()), "COLUMN_SEPARATION_RISK")
+    assert c["first_x_m"] == 1000.0
+    assert c["first_time_s"] == pytest.approx(2.05, abs=0.05)
+    assert c["value_m"] == pytest.approx(-44.21, abs=0.01)
+
+
+def test_hu32_crit4_column_separation_message_is_literal():
+    c = check(solve(frictionless()), "COLUMN_SEPARATION_RISK")
+    # HU-3.2 crit. 4 with the ASCII minus sign (U-26)
+    assert c["message"] == (
+        "La presión cae a -44.2 m.c.a., por debajo del límite admisible de -10.0 m.c.a., por "
+        "primera vez en x = 1000 m y t = 2.05 s. A partir de ese instante puede haber "
+        "separación de columna y los resultados del MOC simple dejan de ser físicos: las "
+        "presiones y caudales posteriores no son fiables."
+    )
+
+
+def test_hu32_crit4_message_order_when_first_crossing_is_not_the_minimum():
+    """Excel case: the first crossing (x = 950 m, t = 3.3 s) precedes the minimum (t = 4 s)."""
+    c = check(solve(horizontal()), "COLUMN_SEPARATION_RISK")
+    assert c["first_time_s"] < c["time_s"]
+    msg = c["message"]
+    value = msg.index(f"{c['first_pressure_head_m']:.1f} m.c.a.")
+    limit = msg.index("-10.0 m.c.a.")
+    where = msg.index(f"x = {c['first_x_m']:g} m")
+    when = msg.index(f"t = {c['first_time_s']:.3g} s")
+    unphysical = msg.index("dejan de ser físicos")
+    assert value < limit < where < when < unphysical
+
+
+def test_hu32_crit5_subatmospheric_without_column_separation():
+    out = solve(frictionless(reservoir_level_m=136.0))
+    assert out["pressure_head_min_global_m"] == pytest.approx(-8.21, abs=0.01)
+    assert "COLUMN_SEPARATION_RISK" not in codes(out)
+    c = check(out, "SUBATMOSPHERIC_PRESSURE")
+    assert c["severity"] == "warning"
+    assert (c["value_m"], c["limit_m"]) == (out["pressure_head_min_global_m"], 0.0)
+    assert "-8.2 m.c.a." in c["message"]
+    assert "x = 1000 m" in c["message"] and "t = 2.05 s" in c["message"]
+    assert c["first_x_m"] is None
+
+
+def test_hu32_crit6_limit_entered_by_the_user():
+    out = solve(frictionless(reservoir_level_m=136.0, min_allowed_pressure_head_m=-7.0))
+    assert "SUBATMOSPHERIC_PRESSURE" not in codes(out)
+    c = check(out, "COLUMN_SEPARATION_RISK")
+    assert c["limit_m"] == -7.0
+    assert "límite admisible de -7.0 m.c.a." in c["message"]
+
+
+def test_hu32_crit7_no_minimum_pressure_check():
+    out = solve(frictionless(reservoir_level_m=150.0))
+    assert out["pressure_head_min_global_m"] == pytest.approx(5.79, abs=0.01)
+    assert not {"COLUMN_SEPARATION_RISK", "SUBATMOSPHERIC_PRESSURE"} & set(codes(out))
+
+
+# --------------------------------------------------------------------------- HU-3.3
+def test_hu33_crit1_steady_negative_warning():
+    out = solve(profile(STEADY_X, [0.0, 98.0, 0.0]))
+    assert out["pressure_head_initial_m"][out["x_m"].index(300.0)] == pytest.approx(
+        -0.04, abs=0.005
+    )
+    c = check(out, "STEADY_NEGATIVE_PRESSURE")
+    assert c["severity"] == "warning"
+    assert (c["x_m"], c["time_s"], c["limit_m"]) == (300.0, 0.0, 0.0)
+    assert c["value_m"] == min(out["pressure_head_initial_m"])
+    # a small depression keeps its sign in the message
+    assert "-0.0 m.c.a. en x = 300 m" in c["message"]
+
+
+def test_hu33_crit2_steady_negative_error():
+    out = solve(profile(STEADY_X, [0.0, 110.0, 0.0]))
+    c = check(out, "STEADY_NEGATIVE_PRESSURE")
+    assert c["severity"] == "error"
+    assert c["value_m"] == pytest.approx(-12.04, abs=0.005)
+    assert (c["x_m"], c["time_s"], c["limit_m"]) == (300.0, 0.0, -10.0)
+    assert "-12.0 m.c.a." in c["message"] and "-10.0 m.c.a." in c["message"]
+    # independent checks: below the limit already at t = 0
+    sep = check(out, "COLUMN_SEPARATION_RISK")
+    assert (sep["first_x_m"], sep["first_time_s"]) == (300.0, 0.0)
+
+
+@pytest.mark.parametrize("z_top", [98.0, 110.0])
+def test_hu33_crit3_result_is_complete(z_top):
+    out = solve(profile(STEADY_X, [0.0, z_top, 0.0]))
+    assert out["status"] == "error"  # COLUMN_SEPARATION_RISK in both cases
+    assert len(out["time_s"]) == out["n_steps"] + 1
+    assert len(out["head_max_m"]) == len(out["x_m"])
+
+
+def test_no_steady_check_on_a_feasible_profile():
+    assert "STEADY_NEGATIVE_PRESSURE" not in codes(solve(profile(LOMA_X, LOMA_Z)))
+
+
+# --------------------------------------------------------------------------- HU-3.4 / V-11
+def test_hu34_crit1_and_v11_rapid_against_excel(excel_reference):
+    out = solve(horizontal())
+    val = validation(excel_reference)
+    assert out["maneuver_type"] == "rapid"
+    assert out["joukowsky_head_rise_m"] == pytest.approx(val["C7"], rel=REL)
+    assert out["theoretical_head_rise_m"] == pytest.approx(val["C11"], rel=REL)
+    assert out["theoretical_head_rise_m"] == out["joukowsky_head_rise_m"]
+    assert out["moc_head_rise_valve_m"] == pytest.approx(val["C22"], rel=REL)
+    assert out["theory_deviation_pct"] == pytest.approx(100 * val["C27"], rel=REL)
+    assert out["full_pulse_length_m"] == pytest.approx(val["C12"], abs=1e-9)
+    assert out["michaud_head_rise_m"] is None
+    # tolerances of the story
+    assert out["joukowsky_head_rise_m"] == pytest.approx(144.2, abs=0.1)
+    assert out["full_pulse_length_m"] == pytest.approx(250.0, abs=0.1)
+    assert out["moc_head_rise_valve_m"] == pytest.approx(149.6, abs=0.1)
+    assert out["theory_deviation_pct"] == pytest.approx(3.712, abs=5e-4)
+
+
+def test_hu34_crit2_and_v11_slow_maneuver():
+    out = solve(horizontal(closure_time_s=[0.0, 10.0], closure_flow_lps=[100.0, 0.0]))
+    assert out["maneuver_type"] == "slow"
+    v0, g, L, tc = out["velocity_initial_ms"], 9.81, 1000.0, 10.0
+    assert out["michaud_head_rise_m"] == pytest.approx(2 * L * v0 / (g * tc), rel=1e-12)
+    assert out["michaud_head_rise_m"] == pytest.approx(28.84, abs=0.01)
+    assert out["theoretical_head_rise_m"] == out["michaud_head_rise_m"]
+    assert out["full_pulse_length_m"] is None
+    assert out["joukowsky_head_rise_m"] == pytest.approx(1000.0 * v0 / g, rel=1e-12)
+    th = out["theoretical_head_rise_m"]
+    assert out["theory_deviation_pct"] == pytest.approx(
+        100 * (out["moc_head_rise_valve_m"] - th) / th, rel=1e-12
+    )
+
+
+def test_hu34_maneuver_boundary_tc_equal_2l_over_a_is_rapid():
+    out = solve(horizontal(closure_time_s=[0.0, 2.0], closure_flow_lps=[100.0, 0.0]))
+    assert out["maneuver_type"] == "rapid"
+    assert out["full_pulse_length_m"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_hu34_crit3_deviation_never_produces_a_check():
+    """Same case, deviation above 5 % or not: checks and status are identical."""
+    slow = horizontal(closure_time_s=[0.0, 10.0], closure_flow_lps=[100.0, 0.0], pn_bar=40.0)
+    out = solve(slow)
+    assert abs(out["theory_deviation_pct"]) > 5.0
+    assert out["checks"] == [] and out["status"] == "ok"
+    text = json.dumps(out["checks"], ensure_ascii=False).lower()
+    assert "joukowsky" not in text and "michaud" not in text
+
+
+# --------------------------------------------------------------------------- HU-3.5
+def test_hu35_crit1_ok_without_checks():
+    out = solve(frictionless(reservoir_level_m=150.0, pn_bar=40.0))
+    assert out["status"] == "ok"
+    assert out["checks"] == []
+
+
+def test_hu35_crit2_status_is_the_most_severe():
+    warning_only = solve(frictionless(reservoir_level_m=136.0, pn_bar=40.0))
+    assert codes(warning_only) == ["SUBATMOSPHERIC_PRESSURE"]
+    assert warning_only["status"] == "warning"
+    mixed = solve(horizontal())
+    assert {c["severity"] for c in mixed["checks"]} == {"warning", "error"}
+    assert mixed["status"] == "error"
+
+
+def test_hu35_crit3_excel_checks_confirmed_by_validation_sheet(excel_reference):
+    out = solve(horizontal())
+    val = validation(excel_reference)
+    assert codes(out) == ["COLUMN_SEPARATION_RISK", "PN_NEAR_LIMIT"]
+    # the global maximum is the valve maximum (4_Validacion C18 = C23)
+    assert out["pressure_head_max_global_m"] == pytest.approx(val["C23"], abs=1e-6)
+    assert out["pressure_head_max_global_x_m"] == 1000.0
+    # C33 is the maximum pressure in bar: ratio = C33 / PN
+    assert out["pressure_max_pn_ratio_pct"] == pytest.approx(100 * val["C33"] / 25.0, rel=REL)
+    assert out["pressure_max_pn_ratio_pct"] == pytest.approx(95.3, abs=0.05)
+    assert "95.3 % del PN 25 bar (254.8 m.c.a.)" in check(out, "PN_NEAR_LIMIT")["message"]
+
+
+@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
+def test_hu35_crit4_messages_spanish_units_decimal_point(name, data):
+    for c in solve(data)["checks"]:
+        msg = c["message"]
+        assert "m.c.a." in msg, msg
+        assert re.search(r"\d,\d", msg) is None, msg  # decimal point, never comma
+        assert "−" not in msg, msg  # ASCII minus (U-26)
+        assert re.search(r"[áéíóúñ]", msg), msg  # Spanish text
+        assert len(msg) <= 400, msg
+        assert msg.endswith("."), msg
+
+
+# --------------------------------------------------------------------------- V-13 / §1.5
+@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
+def test_v13_danger_iff_some_chainage_crosses(name, data):
+    """D-60 / U-36: the danger check exists if and only if the per-chainage predicate holds."""
+    out = solve(data)
+    pn_crossed = any(p > out["pn_head_m"] for p in out["pressure_head_max_m"])
+    limit_crossed = any(
+        p < out["min_allowed_pressure_head_m"] for p in out["pressure_head_min_m"]
+    )
+    assert ("PN_EXCEEDED" in codes(out)) is pn_crossed
+    assert ("COLUMN_SEPARATION_RISK" in codes(out)) is limit_crossed
+
+
+def test_v13_named_cases_have_expected_codes():
+    assert set(codes(solve(horizontal()))) >= {"COLUMN_SEPARATION_RISK"}
+    assert "COLUMN_SEPARATION_RISK" in codes(solve(profile(LOMA_X, LOMA_Z)))
+    assert codes(solve(frictionless(reservoir_level_m=150.0, pn_bar=40.0))) == []
+
+
+@pytest.mark.parametrize("sent,expected", [(None, -10.0), (-7.0, -7.0), (-10.33, -10.33), (0.0, 0.0)])
+def test_v13_limit_echo(sent, expected):
+    data = horizontal() if sent is None else horizontal(min_allowed_pressure_head_m=sent)
+    out = solve(data)
+    assert out["min_allowed_pressure_head_m"] == expected
+    for c in out["checks"]:
+        if c["code"] == "COLUMN_SEPARATION_RISK":
+            assert c["limit_m"] == expected
+
+
+@pytest.mark.parametrize("name,data", PROPERTY_CASES, ids=[n for n, _ in PROPERTY_CASES])
+def test_check_shape_order_and_location(name, data):
+    out = solve(data)
+    severities = [c["severity"] for c in out["checks"]]
+    assert severities == sorted(severities, key={"error": 0, "warning": 1}.get)
+    order = ["PN_EXCEEDED", "PN_NEAR_LIMIT", "COLUMN_SEPARATION_RISK",
+             "SUBATMOSPHERIC_PRESSURE", "STEADY_NEGATIVE_PRESSURE"]
+    for sev in ("error", "warning"):
+        same = [order.index(c["code"]) for c in out["checks"] if c["severity"] == sev]
+        assert same == sorted(same)
+    assert len(set(codes(out))) == len(codes(out))
+    assert not {"PN_EXCEEDED", "PN_NEAR_LIMIT"} <= set(codes(out))
+    assert not {"COLUMN_SEPARATION_RISK", "SUBATMOSPHERIC_PRESSURE"} <= set(codes(out))
+    for c in out["checks"]:
+        assert c["x_m"] in out["x_m"] and c["time_s"] in out["time_s"]
+        has_first = c["code"] == "COLUMN_SEPARATION_RISK"
+        for key in ("first_x_m", "first_time_s", "first_pressure_head_m"):
+            assert (c[key] is not None) is has_first, (c["code"], key)
+    expected_status = "ok" if not severities else ("error" if "error" in severities else "warning")
+    assert out["status"] == expected_status
+
+
+# --------------------------------------------------------------------------- boundaries
+P_MAX = Extreme(value_m=200.0, x_m=1000.0, time_s=2.0)
+P_MIN = Extreme(value_m=5.0, x_m=1000.0, time_s=4.0)
+STEADY_OK = Extreme(value_m=90.0, x_m=1000.0, time_s=0.0)
+
+
+def boundary_codes(**overrides) -> list[str]:
+    args = dict(
+        pressure_max=P_MAX,
+        pressure_min=P_MIN,
+        steady_min=STEADY_OK,
+        first_below_limit=None,
+        pn_bar=25.0,
+        pn_head_m=254.84,
+        pn_ratio_pct=100 * 200.0 / 254.84,
+        min_allowed_m=-10.0,
+    )
+    args.update(overrides)
+    return [c.code for c in build_checks(**args)]
+
+
+def test_boundary_pn():
+    assert PN_NEAR_LIMIT_PCT == 80.0  # U-16
+    at_pn = Extreme(value_m=254.84, x_m=1000.0, time_s=2.0)
+    assert boundary_codes(pressure_max=at_pn, pn_ratio_pct=100.0) == ["PN_NEAR_LIMIT"]
+    assert boundary_codes(pn_ratio_pct=80.0) == []  # 80 % < ratio is strict
+    above = Extreme(value_m=254.85, x_m=1000.0, time_s=2.0)
+    assert boundary_codes(pressure_max=above, pn_ratio_pct=100.0) == ["PN_EXCEEDED"]
+
+
+def test_boundary_minimum_pressure():
+    at_limit = Extreme(value_m=-10.0, x_m=1000.0, time_s=4.0)
+    assert boundary_codes(pressure_min=at_limit) == ["SUBATMOSPHERIC_PRESSURE"]
+    zero = Extreme(value_m=0.0, x_m=1000.0, time_s=4.0)
+    assert boundary_codes(pressure_min=zero) == []
+    below = Extreme(value_m=-10.01, x_m=1000.0, time_s=4.0)
+    assert boundary_codes(pressure_min=below, first_below_limit=below) == [
+        "COLUMN_SEPARATION_RISK"
+    ]
+
+
+def test_boundary_steady():
+    at_limit = Extreme(value_m=-10.0, x_m=300.0, time_s=0.0)
+    [c] = build_checks(
+        pressure_max=P_MAX, pressure_min=P_MIN, steady_min=at_limit, first_below_limit=None,
+        pn_bar=25.0, pn_head_m=254.84, pn_ratio_pct=78.5, min_allowed_m=-10.0,
+    )
+    assert (c.code, c.severity, c.limit_m) == ("STEADY_NEGATIVE_PRESSURE", "warning", 0.0)
+    zero = Extreme(value_m=0.0, x_m=300.0, time_s=0.0)
+    assert boundary_codes(steady_min=zero) == []
+
+
+@pytest.mark.parametrize(
+    "value,text", [(-0.04, "-0.0"), (-0.06, "-0.1"), (0.04, "0.0"), (-0.0, "0.0"), (-44.211, "-44.2")]
+)
+def test_fmt_pressure_keeps_the_sign(value, text):
+    assert fmt_pressure(value) == text
