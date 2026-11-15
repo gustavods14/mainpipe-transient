@@ -490,7 +490,7 @@ def test_f202_density_and_gravity_enter_pn_head():
 def test_f203_displayed_maximum_below_minimum_suggests_coarser_mesh():
     """If Tc + 2L/a lies between the truncated and the exact T_max, do not propose shortening."""
     data = case(length_m=1234.5, wave_speed_ms=1100.0, n_reaches=200, duration_s=60.0,
-                closure_time_s=[0.0, 53.8691], closure_flow_lps=[100.0, 0.0])
+                closure_time_s=[0.0, 53.8688], closure_flow_lps=[100.0, 0.0])
     msg = reject(data)
     assert "acorta" not in msg
     assert "56.114 s" in msg
@@ -521,3 +521,9 @@ def test_f204_many_errors_fit_the_portal_limit():
                       inner_diameter_mm=-1.0, n_reaches=3))
     assert len(msg) <= 400
     assert "errores más)" in msg
+
+
+def test_f206_non_finite_friction_number_uses_range_message():
+    msg = reject(case(wave_speed_ms=1e-320, duration_s=...))
+    assert "inf" not in msg
+    assert "fuera del rango numérico" in msg

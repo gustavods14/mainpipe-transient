@@ -70,3 +70,8 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   Pasan a la fase 2: F1-02 (V-05 vía `solve()`), F1-04 (ningún test ejerce la tolerancia 10⁻⁹
   de U-08; corregir el comentario «400.000…1») y F1-05 (n_reaches por defecto, eco en la
   respuesta y 422 de la duración por defecto, probados a través de `solve()`).
+- 2026-11-14: fase 2 del plan (contrato y topes) entregada en `61d9756`; `hie-verifier` no pasa
+  por F2-01 (excepciones ajenas con magnitudes extremas), corregido con F2-02 … F2-04 en `f29ae4d`
+  y reverificado: **pasa** (`doc/verification/03-fase-2.md`). Menores nuevos F2-05 (test de F2-03
+  con el Tc equivocado) y F2-06 (φ = inf en el mensaje) corregidos después. Provisionales hasta su
+  fase: `profile` (3), `checks` (4), `frame_*` (5).

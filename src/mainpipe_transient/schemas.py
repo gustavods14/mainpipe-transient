@@ -435,6 +435,8 @@ class SolveRequest(BaseModel):
             return f * (length_m / n) * v0 / (2.0 * d * a)
 
         value = phi(self.n_reaches)
+        if not math.isfinite(value):
+            raise OverflowError("non-finite friction number")  # -> range message (F2-06)
         if value <= FRICTION_NUMBER_MAX:
             return
         n_ok = next(

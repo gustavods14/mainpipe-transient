@@ -167,3 +167,99 @@ dueño lo rebaje es una decisión suya. La forma de comprobar el arreglo está e
 ## Veredicto
 
 **No pasa**: el bloqueante F2-01 sigue abierto. `solve` deja salir `OverflowError` y `ZeroDivisionError` de las reglas cruzadas del validador, en contra del criterio de «hecho» y de `kit 02 §1`. El resto del criterio se cumple: los mensajes de HU-1.6, las variantes del tope de 10 000 pasos y la mediana de 0.094 s, con 103 tests en verde también con pydantic 2.13.4. F1-02, F1-04 y F1-05 quedan cerrados, y hay tres menores abiertos (F2-02, F2-03, F2-04).
+
+---
+
+## Reverificación — 2026-11-14
+
+| | |
+|---|---|
+| Commit verificado | `f29ae4dbff7dd8876c4d67212ad064bcb6717e9f` (rama `hie/etapas-0-3`, árbol limpio, 4 commits por delante de `origin`: sin empujar) |
+| Plan | `doc/plans/01-golpe-ariete-v1.md`, estado **congelado** (sin cambios desde `61d9756`) |
+| Kit | `KIT_VERSION = 3.0.0`; `portal/HANDOFF.md` dice 3.0.0: coinciden. Releídos `README.md`, `01` §4–6 y §9, `02`, `04` §2–3 |
+| Verificador | `hie-verifier`, 2026-11-14 |
+
+Alcance del commit `[medido]` (`git show --stat f29ae4d`): `_solve.py`, `schemas.py`, `_format.py`,
+`tests/test_contract.py` (+11 tests), `CHANGELOG.md` y este informe. No toca `_moc.py`, `_closure.py`,
+`_geometry.py`, `portal/` ni el plan.
+
+### Entornos
+
+- **`.venv` del repo** `[medido]`: `.venv\Scripts\python -m pytest -q` → código de salida 0, todo en
+  verde. El `-q` del comando más el `addopts = "-q"` de `pyproject.toml` suprimen la línea de
+  resumen; con `-o addopts=""` sale **114 passed in 1.66s**. `git status` sigue limpio después.
+- **Venv limpio con el pin del portal** `[medido]`: `git archive f29ae4d` extraído en un directorio
+  temporal, `py -3.12 -m venv`, `pip install ./tree "pydantic==2.13.4" pytest`. Resolvió pydantic
+  2.13.4 y numpy 2.5.4, y `find_spec` sitúa `_format`, `_solve`, `schemas` y `_theory` en
+  `venv\Lib\site-packages\`. La suite desde el árbol extraído da **114 passed in 1.86s**.
+- Mis scripts (`probe2.py`, `sweep2.py`, `f203.py`, `f203b.py`, `f204.py`, `timing.py`) están en el
+  directorio temporal del verificador, fuera del repositorio. Los mutantes se aplicaron a la copia
+  instalada en el venv limpio y se restauraron (después: 114 passed).
+
+### Estado de los hallazgos
+
+| ID | Estado | Evidencia |
+|---|---|---|
+| F2-01 (bloqueante) | **cerrado** | `[leído]` `schemas.py:290-300` envuelve las reglas cruzadas y convierte `ArithmeticError` (`OverflowError`, `ZeroDivisionError`) en `ValueError`, que pydantic transforma en `ValidationError`. `_solve.py:55-57` envuelve cualquier otra excepción de la validación en `MainpipeTransientComputationError` con el mensaje genérico y `from exc`. `[medido]` Las tres entradas del informe y `length_m` = 1e308 dan un 422 en `solve` y un `ValidationError` en `SolveRequest.model_validate`, con «Los datos producen valores fuera del rango numérico representable: …». También hice un barrido aleatorio de **16 000 casos** (4 semillas; de 1 a 4 campos numéricos con magnitudes entre 10⁻³²³ y 1.8·10³⁰⁸ y ambos signos, sin `duration_s` en el 30 % de los casos, Tc extremo, N ∈ {10, 100, 200}): **0** excepciones ajenas en `solve` y **0** en `model_validate`. Mutantes: `except ArithmeticError` → `except KeyError` hace fallar 5 tests (`test_f201_*`), y quitar el `except Exception` de la validación en `_solve.py` hace fallar `test_f201_validator_bug_is_wrapped` |
+| F2-02 (menor) | **cerrado** | `[medido]` `test_f202_density_and_gravity_enter_pn_head` (ρ = 998.2 / g = 9.78 y ρ = 1025). Mutante ρ → 1000.0: **1 failed** (`test_f202`). Mutante g → 9.81: **1 failed**. En el informe anterior, el mutante de ρ sobrevivía con 103 passed |
+| F2-03 (menor) | **cerrado en el código**; su test de regresión no lo ejerce (**F2-05**) | `[leído]` `schemas.py:397-412`: si la mínima mostrada (redondeada hacia arriba) supera la T_max mostrada, el mensaje solo propone engrosar la malla, y la N se calcula con la mínima mostrada. `[medido]` Caso que reproduce el defecto (L = 1234.5 m, a = 1100 m/s, N = 200, ley (0; 100), (**53.8688**; 0), T = 60 s; véase la errata más abajo): «…La duración mínima Tc + 2L/a = 56.114 s supera la máxima admisible con esa malla (56.113 s): usa una malla más gruesa, n_reaches <= 198.» Reenviado con N = 198 y T = 56.114 s, calcula con 9901 pasos. Barrido `sweep2.py` (2 semillas, 3000 casos, 2302 con el 422 del tope, **1247 en la ventana de F2-03**): «acorta» no aparece **ninguna vez** dentro de la ventana, y ninguna cifra propuesta falla al reenviarla, en ninguna de las cuatro variantes: acorta (396 casos), envía (56), solo malla más gruesa, reenviada con la mínima mostrada (1826), y malla más gruesa como alternativa, reenviada con la duración original (439) |
+| F2-04 (menor) | **cerrado**, con un residuo menor (**F2-06**) | `[medido]` (`f204.py`): (a) «geometry: valor no admitido; se admite 'horizontal' o 'profile'.»; (b) «closure_time_s (punto 2): debe ser un número.» y «closure_time_s (punto 3): debe ser un número finito.»; (c) `duration_s` = 1e200 → «…necesita 2e+201 pasos…», `length_m` = 1e200 → «…duración mínima de 2e+197 s…», `wave_speed_ms` = 1e-300 → «φ = … = 2.357851009e+300…», y `length_m` = 1e308 → el 422 genérico de F2-01; (d) con 8 errores de campo: **395 caracteres**, 4 mensajes y «(y 4 errores más)», y el recuento es correcto. El barrido de F2-01 no dio **ningún** mensaje de más de 400 caracteres ni ninguna tira de 16 dígitos o más. Otros mensajes de tipo revisados (campo que falta, campo extra, `n_reaches` = 20.5 / "x", booleano, lista, `null`): en español y sin restos en inglés. Los 4 tests `test_f204_*` fallan con el código de `61d9756` `[medido]` |
+
+**Errata del informe anterior.** En F2-03 escribí Tc = 53.8691 s, pero las cifras que cité
+(Tc + 2L/a = 56.11334545) corresponden a **Tc = 53.8688 s**. Con 53.8691 s, Tc + 2L/a = 56.11364545 es mayor
+que la T_max exacta, y ya el código de `61d9756` respondía con la variante «solo malla más gruesa».
+`[medido]` (código de `61d9756` vía `PYTHONPATH`): con 53.8691 → «…usa una malla más gruesa, n_reaches <= 198.»;
+con 53.8688 → «…acorta duration_s a 56.113 s o menos…». El defecto que describí era real, pero el caso de
+reproducción que publiqué estaba mal. Esta errata es el origen de F2-05.
+
+### Criterio de «hecho» de la fase, repasado
+
+| Parte | Resultado | Evidencia |
+|---|---|---|
+| HU-1.6 crit. 1–11 y 13 con su test y mensaje | cumple | `[medido]` 114 passed en los dos entornos. Los tests de la primera verificación no cambian, salvo los 11 nuevos |
+| crit. 13: T = 50 → 10 000 pasos; 50.001 → 422 con «50 s»; cifra con Δt no redondo reenviada calcula | cumple | `[medido]` en la suite. Barrido `sweep2.py`: ninguna cifra propuesta falla al reenviarla, ni siquiera en la ventana de F2-03 |
+| Variante «por defecto» | cumple | `[medido]` en la suite; 56 casos «envía duration_s <=» del barrido, todos calculan al reenviarlos |
+| `solve` nunca deja salir una excepción ajena | **cumple** | `[medido]` F2-01 cerrado: barrido de 16 000 casos y test con fallo inyectado **en la validación** (`test_f201_validator_bug_is_wrapped`) además del que lo inyecta en el cálculo |
+| Mediana de 5 del peor caso < 0.8 s (V-16, U-38) | cumple (peor caso horizontal) | `[medido]` venv limpio, Excel con N = 200 y T = 50 s, 10 000 pasos: 0.0997, 0.0995, 0.0936, 0.0936, 0.0942 s → **mediana 0.094 s** |
+
+Conformidad con el kit, sin cambios respecto de la primera verificación, salvo `kit 02 §1`, que
+ahora **cumple**. Pureza `[medido]`: el mismo grep sobre `src/` no encuentra coincidencias en el
+código. `logger.exception` es `logging`, que el kit permite. `portal/` no se toca.
+
+### Hallazgos nuevos
+
+| ID | Severidad | Archivo:línea | Qué está mal | Evidencia |
+|---|---|---|---|---|
+| F2-05 | menor | `tests/test_contract.py:490-499` (dato en `:493`) | **`test_f203_displayed_maximum_below_minimum_suggests_coarser_mesh` no ejerce la corrección de F2-03.** Usa Tc = 53.8691 s, copiado de la errata del informe anterior. Con ese dato, la mínima ya no cabe en el tope y el código entra en la rama «solo malla más gruesa» por la primera condición (`count_steps(t_min, dt) > MAX_STEPS`), no por la guarda nueva `t_min_shown > t_max`. El test pasa sin la corrección. Para comprobarlo: quitar `or t_min_shown > t_max` de `schemas.py:398` y ejecutar la suite, que debería fallar; o ejecutar el test contra el código de `61d9756`, donde también debería fallar | `[medido]` mutante sin la guarda → **114 passed**. Con ese mismo mutante, el caso con Tc = 53.8688 da «acorta duration_s a 56.113 s o menos…», es decir, el defecto vuelve sin que la suite lo detecte. Test contra `61d9756` (vía `PYTHONPATH`): `test_f203` y `test_f202` **pasan**, y los otros 9 tests `test_f20*` fallan |
+| F2-06 | menor | `src/mainpipe_transient/schemas.py:445` (con `_format.py:44-45` y `:70`) | **El mensaje de U-03 muestra «φ = … = inf»** cuando Δx/a desborda a infinito sin pasar por la aritmética que lanza excepción. Pasa con la duración por defecto, porque con `duration_s` explícito salta antes el 422 genérico de F2-01. `fmt_trim` delega los no finitos en `fmt_value`, que imprime `inf`. Es un valor no finito en un texto para el usuario y no es accionable (`kit 02 §3`). Es un residuo de F2-04 (c). Solo ocurre con entradas absurdas | `[medido]` `wave_speed_ms` = 1e-320 sin `duration_s` → «El número de fricción del tramo φ = f·Δx·V₀/(2·D·a) = inf con n_reaches = 20 supera 0.5…». Lo mismo con `length_m` = 1e306 y `wave_speed_ms` = 1e-10. Aparece en 72 de los 16 000 casos del barrido, siempre en este mensaje |
+
+### Observaciones (no son hallazgos)
+
+- **Entradas absurdas que pasan la validación terminan en 500.** `inner_diameter_mm` = 5e100 da
+  `OverflowError` en el cálculo, y `pn_bar` = 1.8e308 da una respuesta no finita (`allow_inf_nan`).
+  Las dos salen como `MainpipeTransientComputationError` con el texto «Los datos de entrada pasaron la
+  validación…» `[medido]` (de 108 a 129 casos por cada 4000 del barrido). Cumple `kit 02 §1` y el
+  criterio de la fase, porque no es una excepción ajena. Pero un desbordamiento en la validación es un
+  422 y uno en el cálculo es un 500, y `kit 02 §1` dice que `ComputationError` «no debería ocurrir con
+  entradas válidas». El plan no pone cota superior a L, D, Q ni PN (HU-1.6 crit. 7). Si conviene
+  ponerla lo decide `hie-architect`. En esos casos, numpy emite `RuntimeWarning` por `warnings`, sin
+  `print`.
+- El 422 genérico de F2-01 no nombra el campo ni el valor: enumera los campos candidatos. Como solo
+  aparece con magnitudes extremas, lo acepto.
+- La observación de la primera verificación sobre la N propuesta para la duración **mínima** sigue en
+  pie. Afecta también a la variante nueva de F2-03: en el caso de reproducción, reenviar N = 198 con la
+  T = 60 s original vuelve a dar un 422. Cumple el plan.
+
+### Lo que no comprobé
+
+- Lo mismo que en la primera verificación: perfil, checks, fotogramas, tamaño, V-16 con el peor caso
+  del plan, cotas inferiores de las dependencias, `pip install git+…` (el commit no está empujado),
+  Linux/macOS y la ruta FastAPI del portal.
+- No repetí la comparación de fórmulas contra la transcripción independiente (`probe.py`). El commit no
+  toca `_theory.py`, `_moc.py` ni el bloque de cálculo de `_solve.py`, salvo el `except` de la
+  validación, y los tests de fórmulas siguen en verde.
+- El barrido de F2-01 es aleatorio, no exhaustivo, aunque cubre las magnitudes límite de `float`.
+
+### Veredicto
+
+**Pasa.** F2-01 (bloqueante), F2-02, F2-03 y F2-04 quedan cerrados en el código. No hay bloqueantes ni mayores abiertos. Quedan dos menores nuevos: F2-05 (el test de F2-03 no ejerce la corrección) y F2-06 («φ = inf» en el mensaje de U-03 con entradas absurdas).
