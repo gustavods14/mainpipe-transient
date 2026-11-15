@@ -141,6 +141,22 @@ def test_hu11_crit4_datum_invariance_through_solve():
     )
 
 
+def test_hu15_crit3_horizontal_elevation_with_a_non_round_datum():
+    """HU-1.5 crit. 3 (2.0, F5R-03): elevation_m = r(pipe_elevation_m) everywhere, and
+    |pressure_head_*_m - (head_*_m - pipe_elevation_m)| <= 0.001 m + 1e-9 m."""
+    z = 3.14159265
+    out = solve(horizontal(pipe_elevation_m=z, reservoir_level_m=103.14159265))
+    assert out["elevation_m"] == [r3(z)] * len(out["x_m"])
+    assert r3(z) != z  # the datum is not on the millimetre grid
+    tol = 0.001 + 1e-9
+    for h_key, p_key in (("head_initial_m", "pressure_head_initial_m"),
+                         ("head_max_m", "pressure_head_max_m"),
+                         ("head_min_m", "pressure_head_min_m"),
+                         ("head_valve_m", "pressure_head_valve_m"),
+                         ("head_midpoint_m", "pressure_head_midpoint_m")):
+        np.testing.assert_allclose(out[p_key], np.array(out[h_key]) - z, rtol=0, atol=tol)
+
+
 def test_d63_list_versus_scalar_comparison_rule():
     """D-63 (5): a list equals a scalar only after rounding the scalar (HU-1.5 crit. 2)."""
     out = solve(case())

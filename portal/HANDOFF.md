@@ -19,7 +19,7 @@
 | 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | aprobada | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
-| 5 | Construcción (G5) | pendiente | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
+| 5 | Construcción (G5) | en curso | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
@@ -148,3 +148,13 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   `hie-architect` adopte la versión nueva. El mismo commit abre en el portal DT-34 (columna de
   entradas sticky de `solver-2col` más alta que el viewport; nombra esta app, prioridad baja): es
   deuda del patrón del portal, no pide nada al upstream.
+- 2026-11-15: **fase 5 rehecha (contrato 2.0)** entregada en `32a98fd`; `hie-verifier` **pasa**
+  (`doc/verification/07-fase-5.md`, sustituye a `06-fase-5.md` de la 1.0), sin bloqueantes ni
+  mayores; suite también en verde en un venv limpio con pydantic 2.13.4. Medido (D-65 (3)-(4)):
+  receta realista 965 887 B, entrada adversaria 2 819 475 B (22.37 B por número), cota analítica
+  3 285 874 B, petición 19 919 B: no se abre pedido y F5-01 queda cerrado. Menores: F5R-01 (la
+  adversaria publicada no es el máximo en bytes; INTEGRATION.md la presenta como medición y la cota
+  como techo) y F5R-04 (mensajes de ρ y g de usted, literales del plan) **aceptados por el dueño**;
+  F5R-02 (`pn_bar` extremo da 500, anterior a esta fase) **aceptado** y pasa a `hie-architect`
+  porque acotarlo es enmienda del contrato; F5R-03 (test de HU-1.5 crit. 3 con datum no redondo)
+  corregido. Siguiente: fase 6.
