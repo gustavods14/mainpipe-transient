@@ -8,7 +8,7 @@
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.0` |
 | Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15) — antes `1.0` |
-| Commit a pinear | — (se llena en la entrega) |
+| Commit a pinear | `a04431e1dc741acfce305c6f7cfca3cdfa57e96c` (etiqueta `v0.1.0`, rama `main`) |
 
 ## Etapas
 
@@ -20,7 +20,7 @@
 | 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | aprobada | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | aprobada | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
-| 6 | Entrega | pendiente | | commit + etiqueta | |
+| 6 | Entrega | aprobada | 2026-11-15 | commit `a04431e` + etiqueta `v0.1.0` | 3.0.0 |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
 
@@ -173,3 +173,13 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   (`a8a1675`), `ui-spec.json` válido, sin bloqueantes. Quedan para la entrega (etapa 6): etiqueta,
   commit a pinear en este archivo y estado de la etapa 6. Kit 3.0.0 frente al vigente 3.0.1:
   desvío aceptado (F6-04), sin efecto en esta app.
+- 2026-11-15: **entrega (etapa 6).** Commit a pinear `a04431e1dc741acfce305c6f7cfca3cdfa57e96c` (el de la nota de G5; `src/` idéntico
+  al verificado en `fcbff53`), etiqueta `v0.1.0`, rama `main` creada en ese commit y empujada
+  junto con `hie/etapas-0-3`. Comprobado tras el push, en un venv nuevo de Python 3.12:
+  `pip install "mainpipe-transient @ git+https://github.com/gustavods14/mainpipe-transient.git@a04431e1dc741acfce305c6f7cfca3cdfa57e96c"`,
+  suite (446) importando desde `site-packages` y `tools/make_examples.py --check` sin diferencias.
+  Línea para `backend/requirements.txt`:
+  `mainpipe-transient @ git+https://github.com/gustavods14/mainpipe-transient.git@a04431e1dc741acfce305c6f7cfca3cdfa57e96c`.
+  Este registro va en un commit posterior al pin. El portal integra con su flujo
+  (`NEW_APP_GUIDE.md`) leyendo `portal/`. Pendientes para `hie-architect`: kit 3.0.1 (F6-04), U-34
+  frente a D-65 (4) (F6R-01), `pn_bar` extremo (F5R-02) y los anotados en el plan.
