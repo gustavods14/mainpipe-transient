@@ -19,7 +19,7 @@
 | 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | aprobada | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
-| 5 | Construcción (G5) | en curso | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
+| 5 | Construcción (G5) | aprobada | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
 | 6 | Entrega | pendiente | | commit + etiqueta | |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
@@ -158,3 +158,18 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   F5R-02 (`pn_bar` extremo da 500, anterior a esta fase) **aceptado** y pasa a `hie-architect`
   porque acotarlo es enmienda del contrato; F5R-03 (test de HU-1.5 crit. 3 con datum no redondo)
   corregido. Siguiente: fase 6.
+- 2026-11-15: **fase 6 del plan (entrega)** construida en `db613b7`: `tools/make_examples.py`, 12
+  ejemplos de la 2.0 en `portal/examples/` (generados desde el paquete instalado en un venv limpio;
+  se añade `solve-pn-superado` a la lista del plan), `tests/test_examples.py` y
+  `portal/INTEGRATION.md`. `hie-verifier` **no pasa** (`doc/verification/08-fase-6.md`) por F6-01
+  (commit sin empujar) y F6-02 (el párrafo del tamaño no recogía D-65 (4) ni la condición de
+  F5R-01). Corregidos en `fcbff53` (con F6-03), empujado a `hie/etapas-0-3`, y reverificado
+  instalando desde GitHub: **pasa** (`doc/verification/09-fase-6.md`). Menores F6-04 (kit 3.0.1 sin
+  adoptar) y F6R-01 (U-34 en `doc/DECISIONS.md` dice «dos mediciones en verde» en vez de la guarda
+  del portal de D-65 (4)) **aceptados por el dueño**, para `hie-architect`.
+- 2026-11-15: **G5 aprobada** por el dueño (`/hie-flow approve 5`). Checklist de `kit 04 §3`
+  recorrido sobre `fcbff53`: instalación desde GitHub, suite y ejemplos desde lo instalado,
+  ningún DR abierto, `INTEGRATION.md` conforme al código, `src/` sin cambios desde los ejemplos
+  (`a8a1675`), `ui-spec.json` válido, sin bloqueantes. Quedan para la entrega (etapa 6): etiqueta,
+  commit a pinear en este archivo y estado de la etapa 6. Kit 3.0.0 frente al vigente 3.0.1:
+  desvío aceptado (F6-04), sin efecto en esta app.
