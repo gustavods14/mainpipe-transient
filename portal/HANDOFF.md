@@ -6,7 +6,7 @@
 | Paquete Python | `mainpipe_transient` |
 | Distribución | `mainpipe-transient` |
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
-| Kit con el que se diseñó | `3.0.0` |
+| Kit con el que se diseñó | `3.0.1` (adoptada el 2026-11-15 tras la entrega, F6-04; etapas 0–6 diseñadas con `3.0.0`) |
 | Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15) — antes `1.0` |
 | Commit a pinear | `a04431e1dc741acfce305c6f7cfca3cdfa57e96c` (etiqueta `v0.1.0`, rama `main`) |
 
@@ -183,3 +183,17 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   Este registro va en un commit posterior al pin. El portal integra con su flujo
   (`NEW_APP_GUIDE.md`) leyendo `portal/`. Pendientes para `hie-architect`: kit 3.0.1 (F6-04), U-34
   frente a D-65 (4) (F6R-01), `pn_bar` extremo (F5R-02) y los anotados en el plan.
+- 2026-11-15: `hie-architect`, a encargo del dueño, cierra dos de esos pendientes como correcciones
+  de registro, **sin cambio de la Capa 1, del código, de los ejemplos ni del pin** (`a04431e`,
+  `SCHEMA_VERSION` `"2.0"`; sin DR). **F6-04**: se adopta el kit **3.0.1** (fila «Kit con el que
+  se diseñó» y cabecera del plan). Revisado el changelog 3.0.0 → 3.0.1: *patch* (DT-33) que solo
+  reescribe `kit 03 §1` y `§3` (IA) sin cambiar reglas para el upstream; las citas del plan a
+  `kit 03 §1` siguen valiendo y la app no tiene IA (D-62): nada del plan cambia. La columna «Kit»
+  de las etapas se deja en 3.0.0, que es con lo que se aprobó cada una. **F6R-01**: U-34 en
+  `doc/DECISIONS.md`, y la misma formulación en el plan (Parte 1, §2, fase 6, V-18, §7 DR-9),
+  leen ahora D-65 (4) como `portal/INTEGRATION.md`: el techo para toda entrada admitida es la cota
+  de 3 285 874 B, las mediciones son de dos recetas y no el máximo (datum negativo 2 844 325 B) y
+  D-57 (1) se da por cumplido solo con la guarda de D-57 (2) del portal en verde. Las erratas del
+  plan (fase 3 «Q en vértices», rango de U-NN de la cabecera) ya estaban corregidas desde la
+  enmienda del 2026-11-15. Queda pendiente F5R-02 (`pn_bar` extremo), que sí es enmienda del
+  contrato.
