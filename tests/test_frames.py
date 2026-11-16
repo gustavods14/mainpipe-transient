@@ -405,4 +405,8 @@ def test_v18_measured_sizes_fit_d57_d65():
     assert adv["response_b"]["max"] <= 3_500_000, adv
     assert adv["bytes_per_number"] >= 20.0, adv
     assert report["analytic_bound_b"] <= 3_500_000
+    # F5R-01: the negative-datum variant weighs more than the published recipe, and still
+    # stays within the analytic bound, which is the ceiling for every admitted input.
+    neg = report["adversarial_negative_datum"]["response_b"]["max"]
+    assert adv["response_b"]["max"] < neg <= report["analytic_bound_b"]
     assert report["worst_request"]["bytes"] <= 65_536, report["worst_request"]

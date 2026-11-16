@@ -156,6 +156,23 @@ def adversarial_recipe() -> dict[str, Any]:
     }
 
 
+NEGATIVE_DATUM_SHIFT_M = -9.8765432109876543e150
+
+
+def adversarial_negative_datum_recipe() -> dict[str, Any]:
+    """:func:`adversarial_recipe` shifted to a negative datum (F5R-01, published in phase 6).
+
+    Same input with ``reservoir_level_m`` and every ``profile_z_m`` shifted by
+    ``NEGATIVE_DATUM_SHIFT_M``: more minus signs and larger magnitudes, so it weighs more than
+    the published adversarial recipe. It shows that no concrete recipe bounds every admitted
+    input; the analytic bound of U-34 (3b) does. Not one of the two recipes of the portal guard.
+    """
+    data = adversarial_recipe()
+    data["reservoir_level_m"] += NEGATIVE_DATUM_SHIFT_M
+    data["profile_z_m"] = [z + NEGATIVE_DATUM_SHIFT_M for z in data["profile_z_m"]]
+    return data
+
+
 def excel_case(include_frames: bool) -> dict[str, Any]:
     return {
         "geometry": "horizontal", "length_m": 1000.0, "pipe_elevation_m": 0.0,
@@ -307,6 +324,14 @@ def measure(top: int = 3, timing: bool = True) -> dict[str, Any]:
         "fits": adv_sizes["max"] <= RESPONSE_LIMIT_B,
         "valid_recipe": adv_sizes["max"] / adv_leaves >= MIN_ADVERSARIAL_B_PER_NUMBER,
     }
+    neg = solve(adversarial_negative_datum_recipe())
+    neg_sizes = response_sizes(neg)
+    neg_leaves = len(leaves(neg))
+    report["adversarial_negative_datum"] = {
+        "numbers": neg_leaves,
+        "response_b": neg_sizes,
+        "bytes_per_number": neg_sizes["max"] / neg_leaves,
+    }
     bound = analytic_bound(adv)
     report["analytic"] = bound
     report["analytic_bound_b"] = bound["bound_b"]
@@ -372,6 +397,9 @@ def _print(report: dict[str, Any]) -> None:
           f"(>= {MIN_ADVERSARIAL_B_PER_NUMBER:.0f}: {'OK' if a['valid_recipe'] else 'NO'})")
     print(f"Adversarial response: {b(a['response_b']['max'])} vs "
           f"{b(report['limits_b']['response'])}: {'OK' if a['fits'] else 'EXCEEDS'}")
+    g = report["adversarial_negative_datum"]
+    print(f"Adversarial, negative datum (F5R-01): {b(g['response_b']['max'])}, "
+          f"{g['bytes_per_number']:.2f} B per number")
     n = report["analytic"]
     print(f"Analytic bound U-34 (3b): {n['numbers']} numbers x {MAX_NUMBER_B} B + "
           f"{b(n['structure_b'])} structure = {b(n['bound_b'])}")

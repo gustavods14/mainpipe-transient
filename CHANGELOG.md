@@ -168,3 +168,11 @@ en tres puntos:
   cota 3 285 874 B, petición 19 919 B; Excel 90 471 / 24 039 B); peor caso con fotogramas,
   mediana 0.243 s.
 - Sin cambios en `src/`.
+- Correcciones de la verificación (`doc/verification/08-fase-6.md`): el párrafo «Lectura» del
+  tamaño en `portal/INTEGRATION.md` presenta 2 819 475 B como la medición de la receta adversaria
+  publicada y no como el máximo, cita la variante con datum negativo (2 844 325 B), da la cota
+  analítica (3 285 874 B) como techo para toda entrada admitida y recoge D-65 (4): D-57 (1) se
+  cumple solo con la guarda del portal en verde (F6-02, condición de la aceptación de F5R-01).
+  `tools/measure_payload.py` mide esa variante (`adversarial_negative_datum_recipe()`) y
+  `test_v18_measured_sizes_fit_d57_d65` comprueba que pesa más que la publicada y no supera la
+  cota. `make_examples.py --check` ignora `generated_with` y dice qué clave difiere (F6-03).

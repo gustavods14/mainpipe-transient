@@ -350,8 +350,9 @@ separators=(",", ":"))` (lo que emite `JSONResponse`) y
 |---|---|---|
 | Respuesta, receta realista (699 progresivas, 10 000 pasos, 70 fotogramas, `frame_stride` 145) | **964 274 B** | 3 500 000 B |
 | Respuesta, peor caso del barrido (694 progresivas, 71 fotogramas, `frame_stride` 143) | **965 887 B** | 3 500 000 B |
-| Respuesta, entrada adversaria de magnitud (699 progresivas, 10 000 pasos; 22.37 B por número) | **2 819 475 B** | 3 500 000 B |
-| Cota analítica: 126 328 números × 25 B + 127 674 B de estructura | **3 285 874 B** | 3 500 000 B |
+| Respuesta, receta adversaria de magnitud publicada (699 progresivas, 10 000 pasos; 22.37 B por número). Es una medición, no el máximo | **2 819 475 B** | 3 500 000 B |
+| Respuesta, la misma receta con datum negativo (22.57 B por número). Más que la publicada | 2 844 325 B | 3 500 000 B |
+| **Cota analítica, techo para toda entrada admitida**: 126 328 números × 25 B + 127 674 B de estructura | **3 285 874 B** | 3 500 000 B |
 | Petición, receta realista con 17 cifras significativas (compacta: 19 311 B) | **19 919 B** | 65 536 B |
 | Caso del Excel: respuesta con fotogramas / sin fotogramas / petición | 90 471 / 24 039 / 374 B | — |
 
@@ -376,13 +377,28 @@ con Δt = (L/200)/a, Tc = 0.9599·9599·Δt, ley t_i = Tc·(i/19)^1.3, Q_i = Q�
 Q_19 = 0; `n_reaches` = 200, `duration_s` = 9999.5·Δt, `pn_bar` = 16, `include_frames` = true.
 Entrada admitida sin sentido físico: el redondeo a 3 decimales no acorta ningún número.
 
-**Lectura** (D-65 (4)): el techo de 3 500 000 B vale **para toda entrada admitida** con las dos
-mediciones en verde —receta realista y adversaria—, y así queda cerrado F5-01. La cota analítica
-se publica como apoyo pero no sustituye a las mediciones. La guarda de D-57 (2) en
-`backend/tests/` debe medir **exactamente estas dos recetas** (copiar las funciones de
-`tools/measure_payload.py`, que no forman parte del paquete instalado). **Aviso**: producción corta
-cuerpos > 4,5 MB (D-47) sin que el CI ni `TestClient` lo detecten; esa guarda es lo único que lo
-vigila.
+**Lectura** (D-65 (3)-(4)):
+
+- **Las dos cifras medidas son las de dos recetas concretas, no el máximo.** En particular,
+  2 819 475 B es la medición de la receta adversaria publicada, **no** la respuesta más grande
+  posible: la misma receta desplazada a un datum negativo (`reservoir_level_m` y cada
+  `profile_z_m` − 9.8765432109876543·10¹⁵⁰) pesa **2 844 325 B** (22.57 B por número, las dos
+  serializaciones), más que la publicada. Con magnitudes absurdas, el tamaño depende de la
+  magnitud y el signo de cada número, y ninguna receta concreta acota todas las entradas.
+- **El techo para toda entrada admitida es la cota analítica de U-34 (3b): 3 285 874 B**
+  (126 328 números, el máximo recuento admitido con 10 000 pasos, × 25 B, el `repr` más largo de un
+  `float` con su separador, + 127 674 B de estructura). Queda por debajo de 3 500 000 B, y las tres
+  mediciones (receta realista, adversaria publicada y su variante con datum negativo) quedan por
+  debajo de ella.
+- **D-57 (1) se da por cumplido para toda entrada admitida solo con la guarda de D-57 (2) del
+  portal en verde, no con la cuenta** (D-65 (4)) ni con las mediciones del upstream. Esa guarda,
+  en `backend/tests/`, mide **las dos recetas publicadas**, ambas ≤ 3 500 000 B en `TestClient`
+  (D-65 (3)). Las funciones `worst_case_recipe()` y `adversarial_recipe()` están en
+  `tools/measure_payload.py`, que no forma parte del paquete instalado: hay que copiarlas. Con
+  esas mediciones y la cota, el upstream da por cerrado su hallazgo F5-01; el cumplimiento de
+  D-57 (1) lo da la guarda del portal.
+- **Aviso**: producción corta los cuerpos > 4,5 MB (D-47) sin que el CI ni `TestClient` lo
+  detecten. La guarda es lo único que lo vigila.
 
 ### (e) Cambios 1.0 → 2.0 (U-40, D-63, D-64)
 
