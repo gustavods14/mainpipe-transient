@@ -25,6 +25,13 @@
 > sus datos de localización se siguen calculando con precisión completa y no se redondean;
 > HU-3.2 crit. 2 se precisa en consecuencia. No cambia el resto del alcance.
 >
+> Enmienda 2026-11-15, posterior a la entrega v0.1.0 (F5R-02, decisión del dueño del
+> 2026-11-15): `pn_bar` admite como máximo 100 bar y tiene una cota inferior positiva que fija el
+> plan; fuera de ese rango es error 422 (F1, HU-1.6 crit. 14), no un aviso. Solo se anota en
+> «Entradas que usa». Ningún criterio de esta página cambia: todos usan PN de 20, 25 o 40 bar,
+> dentro del rango, y con un `pn_bar` admitido `pn_head_m` y `pressure_max_pn_ratio_pct` son
+> siempre finitos (HU-1.6 crit. 14 d).
+>
 > **Códigos y severidades**: propuestos aquí (los decide el upstream, regla central del kit);
 > `hie-architect` fija en el plan su correspondencia con la paleta de estado del portal (D-13,
 > `kit 01 §5`). Cada aviso lleva `code`, `severity`, `message` en español con unidades y
@@ -39,7 +46,9 @@
 
 `pn_bar`, `min_allowed_pressure_head_m` (F1), más las envolventes y extremos calculados en F1/F2.
 La densidad y la gravedad son constantes fijas, ρ = 1000 kg/m³ y g = 9.81 m/s² (F1, «Constantes
-fijas»; enmienda 2026-11-15).
+fijas»; enmienda 2026-11-15). `pn_bar` admite como máximo 100 bar, con una cota inferior
+positiva que fija el plan; fuera de ese rango es error 422 (F1, HU-1.6 crit. 14; enmienda
+2026-11-15, F5R-02).
 
 ## Salidas
 

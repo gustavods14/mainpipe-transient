@@ -15,12 +15,12 @@
 | # | Etapa | Estado | Fecha | Artefacto | Kit |
 |---|---|---|---|---|---|
 | 0 | Inicio | aprobada | 2026-11-14 | `portal/HANDOFF.md` | 3.0.0 |
-| 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.0 |
-| 2 | Plan (G2) | aprobada | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
-| 3 | Prototipo (G3) | aprobada | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
-| 4 | Decisiones del portal (G4) | aprobada | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
-| 5 | Construcción (G5) | aprobada | 2026-11-15 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.0 |
-| 6 | Entrega | aprobada | 2026-11-15 | commit `a04431e` + etiqueta `v0.1.0` | 3.0.0 |
+| 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.1 |
+| 2 | Plan (G2) | reabierta | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
+| 3 | Prototipo (G3) | reabierta | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
+| 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
+| 5 | Construcción (G5) | pendiente | — | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | — |
+| 6 | Entrega | pendiente | — | commit nuevo + etiqueta (v0.1.0 = `a04431e` sigue integrable) | — |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
 
@@ -197,3 +197,14 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   plan (fase 3 «Q en vértices», rango de U-NN de la cabecera) ya estaban corregidas desde la
   enmienda del 2026-11-15. Queda pendiente F5R-02 (`pn_bar` extremo), que sí es enmienda del
   contrato.
+- 2026-11-15: **enmienda posterior a la entrega v0.1.0** (F5R-02). El dueño decide que `pn_bar`
+  admite como máximo 100 bar (más es 422) y que la cota inferior positiva la fije el plan, con la
+  condición de que ningún `pn_bar` admitido dé un 500 (HU-1.6 crit. 14, pregunta 11 de la épica).
+  En la misma ronda, HU-2.3 crit. 1 pasa a citar el mensaje literal del paquete (comprobado contra
+  `schemas.py`; sin cambio de comportamiento). **G1 aprobada de nuevo** con kit 3.0.1. Es un cambio
+  de la Capa 1 tras G4 (`kit 01 §8`): se reabren las etapas 2–4 (plan, `validation` de `pn_bar` en
+  `ui-spec.json`, re-congelado) y la 5 y la 6 vuelven a `pendiente`. **El pin `a04431e` (v0.1.0)
+  sigue siendo una entrega válida** para el portal hasta que haya una nueva. Siguiente:
+  `hie-architect` enmienda el plan (pregunta 11 a–d: cota inferior, textos de los 422, si sube
+  `SCHEMA_VERSION` o solo `__version__`, artefactos de `portal/` que repiten el rango) y decide si
+  hace falta DR.

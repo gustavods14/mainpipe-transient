@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| estado | **congelado** — 2026-11-15, nueva G4 tras la enmienda del 2026-11-15, con DR-7 … DR-10 resueltos (D-63 … D-66). Contrato de Capa 1 (§1) congelado con **`SCHEMA_VERSION` = `"2.0"`** (U-15, U-37). Antes: congelado el 2026-11-14 en G4 con `"1.0"`; de vuelta a borrador el 2026-11-15 por la enmienda (G1 y G2 reaprobadas ese día). Toda enmienda posterior sigue `kit 01 §8` y U-37 |
-| kit | 3.0.1 (adoptada el 2026-11-15, F6-04; diseñado y congelado con 3.0.0. La 3.0.1 es un *patch* que solo reescribe `kit 03 §1` y `§3` (IA) sin cambiar ninguna regla para el upstream; las citas del plan a `kit 03 §1` siguen valiendo y la app no tiene IA, D-62) |
-| fecha | 2026-11-15 (congelado 2.0); 2026-11-14 (congelado 1.0) |
-| historias | `doc/stories/00-epica.md` … `04-serie-reproduccion.md` (reaprobadas en G1 el 2026-11-15 con la enmienda: precisión de las listas, sin `frame_pressure_head_m`, sin texto de fase, ρ y g constantes) |
-| pedidos al portal | `portal/DECISION-REQUESTS.md`: DR-1 … DR-6 resueltos (D-57 … D-62, commit `2466321` del portal); DR-7 … DR-10 resueltos (D-63 … D-66, alternativa (a) en los cuatro; sin commit del portal registrado). Ningún pedido abierto |
+| estado | **borrador (enmienda F5R-02)** — 2026-11-15, tras la entrega v0.1.0 (pin `a04431e`), pendiente de G2 y de una nueva G4. La enmienda solo toca el rango de `pn_bar` (U-43), los resultados no representables (U-44) y el versionado y la entrega (U-45): §1.3 (fila `pn_bar` y sus mensajes), §1.4 (timbraje), §1.6, fases 7 y 8, V-12 y V-20. **Todo lo demás del contrato 2.0 sigue congelado** tal como quedó en la G4 del 2026-11-15, y `SCHEMA_VERSION` sigue en **`"2.0"`** (U-45). Antes: congelado el 2026-11-15 en la nueva G4 con `"2.0"` (DR-7 … DR-10 resueltos, D-63 … D-66); congelado el 2026-11-14 en G4 con `"1.0"`. Toda enmienda posterior sigue `kit 01 §8` y U-37 |
+| kit | 3.0.1 (adoptada el 2026-11-15, F6-04; diseñado y congelado con 3.0.0. La 3.0.1 es un *patch* que solo reescribe `kit 03 §1` y `§3` (IA) sin cambiar ninguna regla para el upstream; las citas del plan a `kit 03 §1` siguen valiendo y la app no tiene IA, D-62). La enmienda F5R-02 se redacta con 3.0.1 |
+| fecha | 2026-11-15 (enmienda F5R-02, borrador); 2026-11-15 (congelado 2.0); 2026-11-14 (congelado 1.0) |
+| historias | `doc/stories/00-epica.md` … `04-serie-reproduccion.md` (reaprobadas en G1 el 2026-11-15 con la enmienda: precisión de las listas, sin `frame_pressure_head_m`, sin texto de fase, ρ y g constantes; y de nuevo el mismo día con la enmienda F5R-02: HU-1.6 crit. 14, fila `pn_bar`, épica pregunta 11, HU-2.3 crit. 1 con el literal del paquete) |
+| pedidos al portal | `portal/DECISION-REQUESTS.md`: DR-1 … DR-6 resueltos (D-57 … D-62, commit `2466321` del portal); DR-7 … DR-10 resueltos (D-63 … D-66, alternativa (a) en los cuatro; commit `29593af` del portal). La enmienda F5R-02 **no abre pedidos** (U-45 (4)). Ningún pedido abierto |
 | propuesta de Capa 2 | `portal/API-PROPOSAL.md` |
-| decisiones internas | `doc/DECISIONS.md` (U-01 … U-42) |
+| decisiones internas | `doc/DECISIONS.md` (U-01 … U-45; U-43 … U-45 propuestas hasta G2) |
 
 ---
 
@@ -45,10 +45,13 @@ acabados.
 | 4 | Las **verificaciones**: PN, depresión, separación de columna, Joukowsky / Michaud | La inspección final con su acta | Cada aviso aparece justo en su umbral, con su mensaje |
 | 5 | **Rehecha tras la enmienda del 2026-11-15**: la ficha 2.0 (ρ y g fijos, números a 3 decimales) y la **serie para el PLAY** con solo la altura | Las fotos del avance de obra, ahora en un formato más ligero | La película coincide con las series; cada número sale con su milímetro y nada más; el peor caso real y uno cargado con datos absurdos, **pesados en báscula** (no estimados), caben en los 3,5 MB que fijó el portal, y la cuenta de la respuesta más grande posible también |
 | 6 | **Entrega** al portal | Planos «as built» y acta de entrega | Lista de chequeo de la puerta G5 completa, desde un entorno limpio |
+| 7 | **Enmienda F5R-02**: el PN admite de 1 a 100 bar, y un resultado imposible de escribir en números del ordenador da un error claro en lugar de un «error del servidor» | Corregir el acta de recepción: un material fuera de catálogo se rechaza en la puerta con su motivo, no revienta en obra | Cada PN fuera de rango se rechaza con su mensaje; con cualquier PN admitido no hay ningún «error del servidor» causado por los datos, ni con los casos absurdos de la báscula |
+| 8 | **Entrega 0.2.0** al portal | Planos «as built» revisados | Lista de chequeo de G5 otra vez completa desde un entorno limpio; los ejemplos de siempre dan los mismos números y hay tres nuevos |
 
 Las fases 0 a 4 ya están construidas y verificadas y **no se rehacen**: la enmienda no cambia el
 cálculo. Solo se ajustan, dentro de la fase 5, las pruebas que leían listas de la respuesta con
-precisión de micras (ahora salen al milímetro).
+precisión de micras (ahora salen al milímetro). Las fases 0 a 6 están entregadas (v0.1.0); la
+enmienda F5R-02 añade las fases 7 y 8 sin rehacer ninguna de las anteriores.
 
 ## Qué riesgos hay y cómo se cubren
 
@@ -79,6 +82,48 @@ precisión de micras (ahora salen al milímetro).
 4. **Que el resultado parezca válido cuando ya no lo es.** Bajo la presión de vapor el agua se
    separa y este método deja de valer. No se modela (fuera de v1), pero el aviso dirá desde qué
    instante y en qué punto los resultados dejan de ser físicos.
+
+## Enmienda F5R-02 (2026-11-15, tras la entrega v0.1.0): el rango del PN
+
+**Qué pasaba.** El dato de timbraje (PN) solo exigía ser mayor que 0. Con un PN absurdo
+—10³⁰⁴ bar, o 0.000…005 bar— la calculadora no puede escribir el resultado (la presión en metros
+de columna o el porcentaje del PN salen «infinito») y el portal mostraría «error del servidor: el
+cálculo falló en el servidor, no en tus datos», que es falso: fallan los datos.
+
+**Qué se decide** (el tope lo decidió el dueño; lo demás lo propone el plan y el dueño lo acepta
+en esta G2):
+
+| # | Decisión | Por qué |
+|---|---|---|
+| 1 | El PN admite **de 1 a 100 bar, ambos incluidos** (U-43). Más de 100 o menos de 1 (incluidos 0 y negativos) es un error con mensaje: «pn_bar = 100.5 bar está fuera de rango: supera el máximo de 100 bar. El timbraje (PN) debe estar entre 1 y 100 bar.» y su gemelo «… es menor que el mínimo de 1 bar. …» | 1 bar son ≈ 10 m de columna de agua: no hay tubería a presión de clase menor (la normalizada más baja es PN 2.5, y 1 bar deja margen para un PN rebajado por temperatura). Con ese mínimo el porcentaje del PN nunca se dispara con datos reales |
+| 2 | Si los **otros datos** son tan absurdos que el resultado no se puede escribir con los números del ordenador (cotas de 10³⁰⁸ m, caudales de 10⁻³²⁴ L/s…), la respuesta es un **error de datos** con mensaje («El resultado del cálculo queda fuera del rango numérico representable: revisa las magnitudes extremas del nivel del depósito…»), nunca un «error del servidor» (U-44) | Ningún mínimo de PN razonable lo evita: el porcentaje es presión / PN, y la presión puede ser tan grande como el usuario quiera porque las cotas no tienen límite. Es como una báscula: con un camión normal pesa; con uno de un millón de toneladas no debe romperse, debe decir «fuera de escala, revise la carga» |
+| 3 | El contrato **no cambia de versión** (sigue la 2.0); el paquete pasa de **0.1.0 a 0.2.0** y se hace una entrega nueva (U-45). Sin pedido al portal | No cambia ningún campo, unidad ni tipo: solo qué valores de PN se admiten. Los doce ejemplos que ya tiene el portal dan los mismos números |
+
+**Riesgo que se acepta.** El error de datos de la decisión 2 también saldría si un fallo del
+propio programa produjera un «infinito» con datos normales; un fallo que dé «no es un número»
+(`NaN`) sin infinitos sigue saliendo como error del servidor. Las pruebas comprueban que con todos
+los ejemplos y las recetas de la báscula esa guarda no salta.
+
+**Puntos que el dueño acepta en esta G2** (cada uno con su alternativa, si no lo acepta):
+
+1. **Cota inferior de 1 bar, inclusiva** (U-43). Alternativas: 0.1 bar (misma garantía numérica,
+   pero admite PN sin sentido) o 2.5 bar (la clase normalizada mínima, pero rechaza PN rebajados).
+2. **Lectura de HU-1.6 crit. 14 d** (U-44 (6)): con un PN admitido, toda respuesta trae el PN en
+   metros y el porcentaje finitos y nunca hay un «error del servidor» causado por los datos; si
+   los otros datos hacen el resultado imposible de escribir, no hay respuesta, sino el error de
+   datos de la decisión 2. **Pregunta para el dueño** si no la acepta: la otra salida es **acotar
+   las demás entradas** (nivel del depósito, cotas, longitud, diámetro, caudal). Eso cambia el
+   alcance aprobado en G1 («cualquier cota») y vuelve a las historias; y si la cota quedara por
+   debajo de 10¹⁵⁰, dejaría fuera la receta absurda que el portal pesa en su báscula (D-65 (3)), lo
+   que exige un pedido al portal. El plan no lo decide.
+3. **Versionado** (U-45): `SCHEMA_VERSION` sigue en `"2.0"` y `__version__` pasa a 0.2.0, sin
+   pedido. Si el dueño prefiere que lo confirme el portal, el plan redacta un pedido (DR-11) antes
+   de la nueva G4.
+
+**Qué se construye** (Parte 2 §5): la fase 7 (el rango, los mensajes, la guarda y sus pruebas) y
+la fase 8 (entrega 0.2.0: ejemplos regenerados y tres nuevos, `portal/INTEGRATION.md`, etiqueta).
+Además, `hie-prototyper` pone el rango 1–100 en el formulario (`portal/ui-spec.json`). Hasta la
+nueva entrega, la v0.1.0 (`a04431e`) sigue siendo válida para el portal.
 
 ## La enmienda del 2026-11-15 y lo que decidió el portal (D-63 … D-66)
 

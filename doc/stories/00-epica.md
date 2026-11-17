@@ -27,6 +27,13 @@
 > constantes fijas (F1, «Constantes fijas»; F3).
 > Estimado del dueño: peor caso de 3,16 MB a ≈ 0,96 MB; caso del Excel con fotogramas de 356 KB a
 > ≈ 89 KB. Afecta a la tabla de funcionalidades (F4), a «Fuera de v1» y a las preguntas 1, 2 y 10.
+>
+> Enmienda 2026-11-15, posterior a la entrega v0.1.0 (F5R-02 de `doc/verification/07-fase-5.md`;
+> decisión del dueño del 2026-11-15): `pn_bar` admite como máximo 100 bar; más es error 422 (F1,
+> tabla de entradas y HU-1.6 crit. 14). La cota inferior la propone el plan, con la condición de
+> que ningún `pn_bar` admitido produzca un 500. Se añaden una línea en «Fuera de v1» y la
+> pregunta 11. El mismo día se ajusta el literal de HU-2.3 crit. 1 (F2) al mensaje real, sin
+> cambio de comportamiento ni de alcance.
 
 ## Problema de ingeniería
 
@@ -91,6 +98,9 @@ respuesta datos que el cálculo ya produce. El reproductor que los usa es del po
   el usuario (por defecto −10 m.c.a.).
 - **Densidad y gravedad como datos del usuario** (`density_kgm3`, `gravity_ms2`): retiradas de la
   entrada el 2026-11-15; en v1 son constantes fijas, ρ = 1000 kg/m³ y g = 9.81 m/s².
+- **Timbraje de más de 100 bar** (`pn_bar` > 100): es error 422 desde el 2026-11-15 (F5R-02).
+  Una tubería de clase mayor solo puede comprobarse con PN = 100 bar, lo que da avisos de PN más
+  severos que los reales, nunca más benignos.
 - Carga del perfil desde un archivo: no pedida; queda solo como idea, sin pedido al portal.
 - **Caudal en cada fotograma y progresiva**, Q(x, t) (`frame_flow_lps`): retirado de v1 por D-57
   (2026-11-14), ni por defecto ni detrás de una opción, porque la pantalla aprobada no lo usa y el
@@ -189,3 +199,18 @@ decisiones internas.
        en G3 debe dejar de mostrarlos.
     f. **Medición de tamaños** (U-34): rehacerla con la respuesta nueva; las cifras medidas en la
        fase 5 (3 167 900 B; F5-01 hasta 4 129 794 B) dejan de ser las del contrato.
+11. **Rango de `pn_bar`, posterior a la entrega v0.1.0** *(añadida 2026-11-15, F5R-02)*. El dueño
+    fijó solo el tope (`pn_bar` > 100 bar → 422, HU-1.6 crit. 14). Queda para el plan:
+    a. **Cota inferior**: cifra y si es inclusiva. Debe garantizar HU-1.6 crit. 14 d: ningún
+       `pn_bar` admitido da `pn_head_m` o `pressure_max_pn_ratio_pct` infinitos, **con ninguna otra
+       entrada admitida**. Como la razón es presión máxima / PN y `reservoir_level_m` y las cotas
+       del perfil no tienen límite (la receta adversaria de U-34 llega a magnitudes de 10¹⁵⁰ y
+       más), la cota de PN puede no bastar sola: el plan comprueba si hace falta algo más.
+    b. **Textos** de los dos mensajes 422 (tope y cota inferior), en español y con el estilo de los
+       mensajes vigentes del paquete.
+    c. **Versionado y entrega**: es un cambio de la Capa 1 tras G4 (`kit 01 §8`). El plan decide si
+       estrechar el rango de una entrada sube `SCHEMA_VERSION` (`kit 01 §3`) o solo `__version__`,
+       y la nueva entrega (pin) que lo lleva al portal.
+    d. **Artefactos de `portal/` que repiten el rango** y que hoy dicen «> 0»: la fila `pn_bar` de
+       `portal/INTEGRATION.md` y el bloque `validation` de `pn_bar` en `portal/ui-spec.json`. No
+       son de este agente; los actualiza quien corresponda en la enmienda.

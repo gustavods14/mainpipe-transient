@@ -25,6 +25,16 @@
 > Ningún criterio de este archivo calculaba con otra densidad u otra gravedad. No cambia el
 > cálculo ni el resto del alcance.
 >
+> Enmienda 2026-11-15, posterior a la entrega v0.1.0 (F5R-02 de `doc/verification/07-fase-5.md`,
+> «Decisión del dueño sobre los menores»; decisión del dueño del 2026-11-15). `pn_bar` gana un
+> tope superior: **más de 100 bar es error 422**, con mensaje en español que nombra el campo, el
+> valor en bar y el máximo (`kit 02 §3`). Cambia la fila `pn_bar` de la tabla de entradas (antes
+> «> 0») y HU-1.6 gana el crit. 14. Con solo el tope, un `pn_bar` positivo diminuto sigue dando
+> un 500 (`pressure_max_pn_ratio_pct` = inf): la cota inferior la propone `hie-architect` en el
+> plan, y el crit. 14 exige que **ningún `pn_bar` admitido produzca un 500**. HU-1.6 crit. 7
+> (PN ≤ 0 → 422) sigue vigente. Es un cambio de la Capa 1 posterior a G4 (`kit 01 §8`). No cambia
+> el cálculo ni el resto del alcance.
+>
 > **Método**: Método de las Características en H y Q, malla con número de Courant = 1
 > (Δx = L/N, Δt = Δx/a), fricción de Darcy-Weisbach con f constante. Contornos: depósito de nivel
 > constante (H = H_dep) aguas arriba; caudal impuesto Q(t) en la válvula aguas abajo. Régimen
@@ -47,7 +57,7 @@
 | `initial_flow_lps` | L/s | 100 (0.1 m³/s en el Excel) | > 0 |
 | `reservoir_level_m` | m | 100 | cualquier cota, en el mismo datum que la tubería |
 | `pipe_elevation_m` | m | 0 | ≤ `reservoir_level_m` (solo con geometría `horizontal`) |
-| `pn_bar` | bar | 25 | > 0 (lo usa F3) |
+| `pn_bar` | bar | 25 | > 0 y ≤ 100, con una cota inferior positiva que fija el plan (lo usa F3). *Enmendado 2026-11-15 (F5R-02): antes «> 0»* |
 | `min_allowed_pressure_head_m` | m.c.a. | −10 (por defecto) | ≥ −10.33 (lo usa F3); sin ajuste por altitud |
 | `closure_time_s` | s | 0, 0.5, 1, 1.5, 2, 5, 10, 20 | 2 a 20 puntos; empieza en 0; estrictamente creciente |
 | `closure_flow_lps` | L/s | 100, 50, 20, 0, 0, 0, 0, 0 | misma longitud que `closure_time_s`; primer valor = Q₀; 0 ≤ Q ≤ Q₀; **último valor = 0** (cierre total) |
@@ -241,6 +251,28 @@ resultado calculado.
     `n_reaches`, da en s la duración máxima admisible con esa malla (tope de pasos × `dt_s`) e
     indica que se puede acortar la duración o usar una malla más gruesa; y con `duration_s` igual a
     esa duración máxima el cálculo se resuelve sin error. *(Añadido 2026-11-14, D-57.)*
+14. **Rango de `pn_bar`.** *(Añadido 2026-11-15, F5R-02, decisión del dueño.)* Los mensajes van en
+    español y dan el valor y el límite en bar (`kit 02 §3`). Es el mismo texto que da la
+    validación del modelo de entrada que el portal ejecuta antes de llamar al paquete
+    (`kit 02 §3`), no el texto en inglés de una restricción nativa.
+    a. **Tope admitido.** Dado el caso del Excel con `pn_bar` = 100, cuando se llama a `solve`,
+       entonces el cálculo se resuelve sin error, con `pn_head_m` = 1019.37 ± 0.01
+       (100·10⁵/(ρ·g), con las constantes fijas).
+    b. **Por encima del tope.** Dado el caso del Excel con `pn_bar` = 100.5, cuando se llama a
+       `solve`, entonces error 422 (`MainpipeTransientValidationError`) cuyo mensaje nombra
+       `pn_bar`, da el valor recibido (100.5 bar) y el máximo admitido (100 bar). Lo mismo con
+       `pn_bar` = 10³⁰⁴, que hoy da un 500.
+    c. **Por debajo de la cota inferior.** Dado un `pn_bar` positivo por debajo de la cota
+       inferior, cuando se llama a `solve`, entonces error 422 cuyo mensaje nombra `pn_bar`, da el
+       valor recibido en bar y la cota inferior en bar. **La cifra de la cota inferior, y si es
+       inclusiva, la fija el plan.** La cota debe dejar fuera, como mínimo, los valores que hoy
+       dan un 500 (F5R-02): `pn_bar` = 5·10⁻³²⁴, 10⁻³²⁰ y 10⁻³⁰⁰.
+    d. **Ningún 500 con un `pn_bar` admitido.** Dado cualquier `pn_bar` admitido por el rango
+       (cota inferior del plan, 100 bar], y cualquier otra entrada admitida, cuando se llama a
+       `solve`, entonces no se lanza `MainpipeTransientComputationError` (500) y `pn_head_m` y
+       `pressure_max_pn_ratio_pct` son números finitos. Se comprueba, como mínimo, con
+       `pn_bar` = 100 y con el menor valor que admita el plan, cada uno con el caso del Excel y
+       con la receta adversaria de tamaño del plan (U-34).
 
 ## HU-1.7 — Elegir la malla de cálculo y la duración de la simulación
 

@@ -17,6 +17,12 @@
 > extremos escalares y sus progresivas no. Se ajustan las tolerancias que el redondeo hace
 > inverificables: HU-2.1 crit. 2 y HU-2.2 crits. 1, 2 y 3. No cambia el cálculo ni el resto del
 > alcance. Etapa 1 reabierta para esta enmienda.
+>
+> Enmienda 2026-11-15, posterior a la entrega v0.1.0 (observación «Literal de HU-2.3 crit. 1» de
+> `doc/verification/04-fase-3.md`, tras la corrección F3-03; decisión del dueño del 2026-11-15):
+> HU-2.3 crit. 1 pasa a citar el mensaje literal que da el paquete, con la numeración
+> «(punto N)» desde 1 que F3-03 intercaló. **No es un cambio de comportamiento**: el mensaje ya es
+> ese desde F3-03 y la verificación daba el criterio por cumplido en su sentido.
 
 ## Entradas (además de las de F1)
 
@@ -101,8 +107,14 @@ debajo del perfil **no** es error: se calcula y se avisa (F3, `STEADY_NEGATIVE_P
 
 **Criterios de aceptación** (mensajes en español, con unidades, `kit 02 §3`)
 
-1. Dado `profile_x_m` = [0, 150, 300, 120, 600], entonces error 422 cuyo mensaje dice que la
-   progresiva debe ser estrictamente creciente y señala que x[3] = 120 m es menor que x[2] = 300 m.
+1. Dado `profile_x_m` = [0, 150, 300, 120, 600], cuando se llama a `solve`, entonces error 422
+   cuyo mensaje es exactamente:
+   «La progresiva del perfil (profile_x_m) debe ser estrictamente creciente: x[3] = 120 m
+   (punto 4) es menor que x[2] = 300 m (punto 3).»
+   (en una sola línea). `x[i]` es el índice de `profile_x_m` contado desde 0 y «punto N» es la fila
+   de la tabla del perfil contada desde 1.
+   *(Enmendado 2026-11-15: antes «señala que x[3] = 120 m es menor que x[2] = 300 m»; el literal
+   pasa a coincidir con el mensaje real tras F3-03. No cambia el comportamiento.)*
 2. Dado un perfil con menos de 2 o más de 500 puntos, o con `profile_x_m` y `profile_z_m` de
    distinta longitud, entonces error 422.
 3. Dado `profile_x_m[0]` ≠ 0, entonces error 422 que pide que el perfil empiece en x = 0 m (el
