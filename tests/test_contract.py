@@ -275,7 +275,8 @@ def test_hu16_crit6_law_length(times, flows, expected):
         ("length_m", 0.0, "mayor que 0 m"),
         ("inner_diameter_mm", -300.0, "mayor que 0 mm"),
         ("initial_flow_lps", 0.0, "mayor que 0 L/s"),
-        ("pn_bar", 0.0, "mayor que 0 bar"),
+        ("pn_bar", 0.0, "menor que el mínimo de 1 bar"),
+        ("pn_bar", 100.5, "supera el máximo de 100 bar"),
     ],
 )
 def test_hu16_crit7_ranges_name_field_and_limit(field, value, expected):

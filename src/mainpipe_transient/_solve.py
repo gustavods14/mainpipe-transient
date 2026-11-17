@@ -3,11 +3,14 @@
 Plan phases 2-5: horizontal and profile geometry, checks and status, and the player
 frames (U-10, U-24). Contract 2.0: rho and g are constants (U-40) and the m / m.c.a. / L/s
 output lists are rounded once, here, when the response is built (U-39, D-63).
+Phase 7 (amendment F5R-02, U-44): a result that is not representable in ``float64`` is a
+422 about the input, not a 500.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 import numpy as np
@@ -40,6 +43,14 @@ __all__ = ["solve"]
 _LPS_PER_M3S = 1000.0
 _MM_PER_M = 1000.0
 
+# U-44 (1), plan 01 §1.6: the single message of a non-representable result.
+UNREPRESENTABLE_MESSAGE = (
+    "El resultado del cálculo queda fuera del rango numérico representable: revisa las "
+    "magnitudes extremas del nivel del depósito (reservoir_level_m), de las cotas "
+    "(pipe_elevation_m o profile_z_m), de la longitud, del diámetro y del caudal inicial. "
+    "Con valores de proyecto no se llega a este límite."
+)
+
 _UNEXPECTED_MESSAGE = (
     "Error interno inesperado durante el cálculo del transitorio. Los datos de entrada "
     "pasaron la validación; si el problema persiste, informa del caso al equipo de la API."
@@ -53,8 +64,10 @@ def solve(data: dict[str, Any]) -> dict[str, Any]:
     ``SolveResponse(...).model_dump(mode="json")``.
 
     Raises:
-        MainpipeTransientValidationError: invalid input (HTTP 422), message in Spanish.
-        MainpipeTransientComputationError: any unexpected internal failure (HTTP 500).
+        MainpipeTransientValidationError: invalid input (HTTP 422), message in Spanish; also
+            when the input gives a result that ``float64`` cannot represent (U-44).
+        MainpipeTransientComputationError: any unexpected internal failure (HTTP 500),
+            including a NaN without overflow.
     """
     try:
         request = SolveRequest.model_validate(data)
@@ -69,6 +82,9 @@ def solve(data: dict[str, Any]) -> dict[str, Any]:
         return response.model_dump(mode="json")
     except MainpipeTransientError:
         raise
+    except ArithmeticError as exc:  # U-44 (1): OverflowError, ZeroDivisionError, FloatingPointError
+        logger.info("non-representable result (%s: %s)", type(exc).__name__, exc)
+        raise MainpipeTransientValidationError(UNREPRESENTABLE_MESSAGE) from exc
     except Exception as exc:
         logger.exception("unexpected failure while solving")
         raise MainpipeTransientComputationError(_UNEXPECTED_MESSAGE) from exc
@@ -108,6 +124,8 @@ def _compute(req: SolveRequest) -> SolveResponse:
     h_vmin, t_vmin = res.head_valve_min()
     p_max = res.pressure_head_max_global()
     p_min = res.pressure_head_min_global()
+    steady_min = res.pressure_head_initial_min()
+    first_below = res.first_below_limit()
     pn_head = req.pn_bar * 1e5 / (DENSITY_KGM3 * GRAVITY_MS2)  # M18, U-40
     pn_ratio_pct = 100.0 * p_max.value_m / pn_head
     th = theory(
@@ -119,11 +137,73 @@ def _compute(req: SolveRequest) -> SolveResponse:
         head_valve_initial_m=float(res.head_valve_m[0]),
         head_valve_max_m=h_vmax,
     )
+
+    # Every number of the response, at full precision (before the rounding of U-39).
+    scalars: dict[str, float | None] = {
+        "length_m": mesh.length_m,
+        "area_m2": der.area_m2,
+        "velocity_initial_ms": der.velocity_initial_ms,
+        "head_loss_m": der.head_loss_m,
+        "dx_m": mesh.dx_m,
+        "dt_s": mesh.dt_s,
+        "duration_s": res.duration_s,
+        "reflection_time_s": der.reflection_time_s,
+        "wave_period_s": der.wave_period_s,
+        "closure_duration_s": tc,
+        "friction_number": der.friction_number,
+        "head_valve_max_m": h_vmax,
+        "head_valve_max_time_s": t_vmax,
+        "head_valve_min_m": h_vmin,
+        "head_valve_min_time_s": t_vmin,
+        "pressure_head_max_global_m": p_max.value_m,
+        "pressure_head_max_global_x_m": p_max.x_m,
+        "pressure_head_max_global_time_s": p_max.time_s,
+        "pressure_head_min_global_m": p_min.value_m,
+        "pressure_head_min_global_x_m": p_min.x_m,
+        "pressure_head_min_global_time_s": p_min.time_s,
+        "pn_head_m": pn_head,
+        "pressure_max_pn_ratio_pct": pn_ratio_pct,
+        "min_allowed_pressure_head_m": req.min_allowed_pressure_head_m,
+        "joukowsky_head_rise_m": th.joukowsky_head_rise_m,
+        "michaud_head_rise_m": th.michaud_head_rise_m,
+        "full_pulse_length_m": th.full_pulse_length_m,
+        "theoretical_head_rise_m": th.theoretical_head_rise_m,
+        "moc_head_rise_valve_m": th.moc_head_rise_valve_m,
+        "theory_deviation_pct": th.theory_deviation_pct,
+    }
+    # Lists rounded to 3 decimals when the response is built (U-39 (1), D-63 (1)).
+    rounded: dict[str, np.ndarray] = {
+        "head_valve_m": res.head_valve_m,
+        "head_midpoint_m": res.head_midpoint_m,
+        "pressure_head_valve_m": res.pressure_head_valve_m,
+        "pressure_head_midpoint_m": res.pressure_head_midpoint_m,
+        "flow_reservoir_lps": _LPS_PER_M3S * res.flow_reservoir_m3s,
+        "flow_valve_lps": _LPS_PER_M3S * res.flow_valve_m3s,
+        "x_m": mesh.station_x_m,
+        "elevation_m": mesh.station_elevation_m,
+        "head_initial_m": res.head_initial_m,
+        "pressure_head_initial_m": res.pressure_head_initial_m,
+        "head_max_m": res.head_max_m,
+        "head_min_m": res.head_min_m,
+        "pressure_head_max_m": res.pressure_head_max_m,
+        "pressure_head_min_m": res.pressure_head_min_m,
+    }
+    stride = None if frames is None else frames.stride
+    frame_arrays = _frame_arrays(res, stride)
+    # Check fields not already above: the steady minimum and the first crossing (§1.5).
+    check_values = [
+        v for e in (steady_min, first_below) if e is not None for v in (e.value_m, e.x_m, e.time_s)
+    ]
+    _ensure_representable(
+        [*scalars.values(), *check_values],
+        [res.time_s, *rounded.values(), *frame_arrays.values()],
+    )
+
     checks = build_checks(
         pressure_max=p_max,
         pressure_min=p_min,
-        steady_min=res.pressure_head_initial_min(),
-        first_below_limit=res.first_below_limit(),
+        steady_min=steady_min,
+        first_below_limit=first_below,
         pn_bar=req.pn_bar,
         pn_head_m=pn_head,
         pn_ratio_pct=pn_ratio_pct,
@@ -136,57 +216,27 @@ def _compute(req: SolveRequest) -> SolveResponse:
         geometry=req.geometry,
         status=status_of(checks),
         checks=checks,
-        length_m=mesh.length_m,
-        area_m2=der.area_m2,
-        velocity_initial_ms=der.velocity_initial_ms,
-        head_loss_m=der.head_loss_m,
-        dx_m=mesh.dx_m,
-        dt_s=mesh.dt_s,
         n_reaches=mesh.n_reaches,
         n_steps=res.n_steps,
-        duration_s=res.duration_s,
-        reflection_time_s=der.reflection_time_s,
-        wave_period_s=der.wave_period_s,
-        closure_duration_s=tc,
-        friction_number=der.friction_number,
-        time_s=_floats(res.time_s),
-        head_valve_m=_rounded(res.head_valve_m),
-        head_midpoint_m=_rounded(res.head_midpoint_m),
-        pressure_head_valve_m=_rounded(res.pressure_head_valve_m),
-        pressure_head_midpoint_m=_rounded(res.pressure_head_midpoint_m),
-        flow_reservoir_lps=_rounded(_LPS_PER_M3S * res.flow_reservoir_m3s),
-        flow_valve_lps=_rounded(_LPS_PER_M3S * res.flow_valve_m3s),
-        x_m=_rounded(mesh.station_x_m),
-        x_is_node=mesh.station_is_node.tolist(),
-        elevation_m=_rounded(mesh.station_elevation_m),
-        head_initial_m=_rounded(res.head_initial_m),
-        pressure_head_initial_m=_rounded(res.pressure_head_initial_m),
-        head_max_m=_rounded(res.head_max_m),
-        head_min_m=_rounded(res.head_min_m),
-        pressure_head_max_m=_rounded(res.pressure_head_max_m),
-        pressure_head_min_m=_rounded(res.pressure_head_min_m),
-        head_valve_max_m=h_vmax,
-        head_valve_max_time_s=t_vmax,
-        head_valve_min_m=h_vmin,
-        head_valve_min_time_s=t_vmin,
-        pressure_head_max_global_m=p_max.value_m,
-        pressure_head_max_global_x_m=p_max.x_m,
-        pressure_head_max_global_time_s=p_max.time_s,
-        pressure_head_min_global_m=p_min.value_m,
-        pressure_head_min_global_x_m=p_min.x_m,
-        pressure_head_min_global_time_s=p_min.time_s,
-        pn_head_m=pn_head,
-        pressure_max_pn_ratio_pct=pn_ratio_pct,
-        min_allowed_pressure_head_m=req.min_allowed_pressure_head_m,
         maneuver_type=th.maneuver_type,
-        joukowsky_head_rise_m=th.joukowsky_head_rise_m,
-        michaud_head_rise_m=th.michaud_head_rise_m,
-        full_pulse_length_m=th.full_pulse_length_m,
-        theoretical_head_rise_m=th.theoretical_head_rise_m,
-        moc_head_rise_valve_m=th.moc_head_rise_valve_m,
-        theory_deviation_pct=th.theory_deviation_pct,
-        **_frame_fields(res, None if frames is None else frames.stride),
+        time_s=_floats(res.time_s),
+        x_is_node=mesh.station_is_node.tolist(),
+        **scalars,
+        **{name: _rounded(values) for name, values in rounded.items()},
+        **_frame_fields(frame_arrays, stride),
     )
+
+
+def _ensure_representable(scalars: list[float | None], arrays: list[np.ndarray]) -> None:
+    """U-44 (1)-(2): any +/-inf among the full-precision output values is a 422.
+
+    Only infinities count: a NaN without overflow is a package failure and keeps failing as
+    a 500 when the response is built (``allow_inf_nan=False``, U-44 (3)).
+    """
+    if any(v is not None and math.isinf(v) for v in scalars) or any(
+        bool(np.isinf(a).any()) for a in arrays
+    ):
+        raise MainpipeTransientValidationError(UNREPRESENTABLE_MESSAGE)
 
 
 def _build_mesh(req: SolveRequest) -> Mesh:
@@ -197,16 +247,27 @@ def _build_mesh(req: SolveRequest) -> Mesh:
     return build_horizontal_mesh(req.length_m, req.n_reaches, req.wave_speed_ms, req.pipe_elevation_m)
 
 
-def _frame_fields(res: MocResult, stride: int | None) -> dict[str, Any]:
-    """Player series (plan 01 §1.4, U-10, U-11); all null without frames (U-24)."""
+def _frame_arrays(res: MocResult, stride: int | None) -> dict[str, np.ndarray]:
+    """Full-precision player series (plan 01 §1.4, U-10, U-11); empty without frames (U-24)."""
     if stride is None or res.frame_steps is None or res.frame_head_m is None:
-        return dict.fromkeys(("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m"))
+        return {}
     # No frame_pressure_head_m since 2.0 (D-64): p = frame_head_m[k][j] - elevation_m[j].
     return {
+        "frame_time_s": res.time_s[res.frame_steps],
+        "frame_x_m": res.mesh.station_x_m,
+        "frame_head_m": res.frame_head_m,
+    }
+
+
+def _frame_fields(arrays: dict[str, np.ndarray], stride: int | None) -> dict[str, Any]:
+    """Response fields of the player; all null without frames (U-24)."""
+    if not arrays:
+        return dict.fromkeys(("frame_stride", "frame_time_s", "frame_x_m", "frame_head_m"))
+    return {
         "frame_stride": stride,
-        "frame_time_s": _floats(res.time_s[res.frame_steps]),
-        "frame_x_m": _rounded(res.mesh.station_x_m),
-        "frame_head_m": [_rounded(row) for row in res.frame_head_m],
+        "frame_time_s": _floats(arrays["frame_time_s"]),
+        "frame_x_m": _rounded(arrays["frame_x_m"]),
+        "frame_head_m": [_rounded(row) for row in arrays["frame_head_m"]],
     }
 
 

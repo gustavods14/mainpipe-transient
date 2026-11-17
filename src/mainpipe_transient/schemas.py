@@ -36,6 +36,9 @@ FIRST_FLOW_REL_TOL = 1e-3  # 0.1 % of Q0 (HU-1.6 crit. 3, U-18)
 FRICTION_NUMBER_MAX = 0.5  # U-03
 PROFILE_POINTS_MIN = 2  # HU-2.3 crit. 2
 PROFILE_POINTS_MAX = 500
+PN_MIN_BAR = 1.0  # U-43 (amendment F5R-02): 1 <= PN <= 100 bar, both included
+PN_MAX_BAR = 100.0
+_PN_RANGE_HINT = "El timbraje (PN) debe estar entre 1 y 100 bar."
 _DURATION_ABS_TOL = 1e-9  # binary noise when comparing durations (same spirit as U-08)
 
 # Inputs retired in 2.0 (U-40): their own Spanish 422 instead of the generic extra_forbidden.
@@ -61,6 +64,16 @@ CheckCode = Literal[
 
 def _lps(value: float) -> str:
     return fmt_trim(value, 3)
+
+
+def _pn_echo(value: float, limit: float) -> str:
+    """Echo of a rejected PN (U-43 (2)): U-26 format, or ``repr`` when it reads as the limit.
+
+    With 10 significant digits, 100.00000000001 would print as "100" and the message would
+    say "100 bar supera el máximo de 100 bar"; ``repr`` gives the shortest exact decimal.
+    """
+    text = fmt_value(value)
+    return repr(value) if text == fmt_value(limit) else text
 
 
 def _count(n: int) -> str:
@@ -126,7 +139,7 @@ class SolveRequest(BaseModel):
     reservoir_level_m: float = Field(
         ..., description="Constant reservoir level H_dep (m), same datum as the pipe."
     )
-    pn_bar: float = Field(..., description="Pipe pressure rating PN (bar). > 0.")
+    pn_bar: float = Field(..., description="Pipe pressure rating PN (bar). 1 <= PN <= 100.")
     min_allowed_pressure_head_m: float = Field(
         -10.0,
         description="Minimum allowed pressure head (m of water column). "
@@ -219,11 +232,17 @@ class SolveRequest(BaseModel):
 
     @field_validator("pn_bar")
     @classmethod
-    def _pn_positive(cls, v: float) -> float:
-        if not v > 0:
+    def _pn_range(cls, v: float) -> float:
+        """1 <= PN <= 100 bar, both included (U-43, amendment F5R-02)."""
+        if v > PN_MAX_BAR:
             raise ValueError(
-                f"pn_bar = {fmt_value(v)} bar no es válido: el timbraje (PN) debe ser mayor "
-                "que 0 bar."
+                f"pn_bar = {_pn_echo(v, PN_MAX_BAR)} bar está fuera de rango: supera el máximo "
+                f"de {fmt_value(PN_MAX_BAR)} bar. {_PN_RANGE_HINT}"
+            )
+        if not v >= PN_MIN_BAR:
+            raise ValueError(
+                f"pn_bar = {_pn_echo(v, PN_MIN_BAR)} bar está fuera de rango: es menor que el "
+                f"mínimo de {fmt_value(PN_MIN_BAR)} bar. {_PN_RANGE_HINT}"
             )
         return v
 
