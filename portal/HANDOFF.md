@@ -16,7 +16,7 @@
 |---|---|---|---|---|---|
 | 0 | Inicio | aprobada | 2026-11-14 | `portal/HANDOFF.md` | 3.0.0 |
 | 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.1 |
-| 2 | Plan (G2) | reabierta | 2026-11-15 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.0 |
+| 2 | Plan (G2) | aprobada | 2026-11-16 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.1 |
 | 3 | Prototipo (G3) | reabierta | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
 | 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | pendiente | — | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | — |
@@ -208,3 +208,13 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   `hie-architect` enmienda el plan (pregunta 11 a–d: cota inferior, textos de los 422, si sube
   `SCHEMA_VERSION` o solo `__version__`, artefactos de `portal/` que repiten el rango) y decide si
   hace falta DR.
+- 2026-11-16: **G2 aprobada de nuevo con la enmienda F5R-02** (kit 3.0.1). El plan
+  `doc/plans/01-golpe-ariete-v1.md` sigue en borrador hasta la nueva G4 y añade U-43 … U-45 y las
+  fases 7–8. El dueño acepta los tres puntos de la Parte 1: (1) `pn_bar` entre 1 y 100 bar, ambos
+  incluidos, con sus dos mensajes de 422 (U-43); (2) la lectura de HU-1.6 crit. 14 d: un resultado
+  no representable por otras entradas extremas da un 422 «fuera del rango numérico representable»,
+  no un 500, sin acotar las demás entradas, y se acepta el riesgo residual (un `NaN` sin
+  desbordamiento sigue siendo 500) (U-44); (3) `SCHEMA_VERSION` sigue en `"2.0"`, `__version__`
+  pasa a 0.2.0 y no hay pedido al portal (U-45). Ningún DR abierto. Siguiente: `hie-prototyper`
+  pone la `validation` de `pn_bar` en [1, 100] en `portal/ui-spec.json` (G3); después
+  `hie-architect` vuelve a congelar el plan y pasa U-43 … U-45 a vigentes (G4).
