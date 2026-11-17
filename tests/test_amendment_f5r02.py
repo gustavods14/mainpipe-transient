@@ -20,6 +20,7 @@ import importlib.util
 import json
 import logging
 import math
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -200,6 +201,30 @@ OVERFLOW_CASES = {
 }
 
 
+# F7-01 (phase 7 verification): L*j/N overflows, some chainages are inf and the envelopes NaN.
+# With any admitted PN this gave a 500 (ValueError in the global-extreme search) in v0.1.0 and
+# in the first phase-7 commit, because the inf search ran after the extremes.
+for _pn in (1.0, 25.0, 100.0):
+    OVERFLOW_CASES[f"chainage_overflow_pn{_pn:g}"] = (
+        case(darcy_friction_factor=0.0, length_m=1e307, duration_s=None, pn_bar=_pn),
+        None,
+    )
+OVERFLOW_CASES["chainage_overflow_n200"] = (
+    case(darcy_friction_factor=0.0, length_m=1e306, n_reaches=200, duration_s=None),
+    None,
+)
+OVERFLOW_CASES["chainage_overflow_profile"] = (
+    {
+        **{k: v for k, v in case(darcy_friction_factor=0.0, duration_s=None).items()
+           if k not in ("length_m", "pipe_elevation_m")},
+        "geometry": "profile",
+        "profile_x_m": [0.0, 5e306, 1e307],
+        "profile_z_m": [0.0, -5.0, 0.0],
+    },
+    None,
+)
+
+
 @pytest.mark.parametrize("name", sorted(OVERFLOW_CASES))
 def test_v20b_non_representable_result_is_422(name):
     data, cause = OVERFLOW_CASES[name]
@@ -212,6 +237,23 @@ def test_v20b_non_representable_result_is_422(name):
         assert info.value.__cause__ is None
     else:
         assert isinstance(info.value.__cause__, cause)
+
+
+@pytest.mark.parametrize("name", sorted(OVERFLOW_CASES))
+def test_v20b_422_does_not_depend_on_the_caller_warning_filters(name):
+    """F7-02: with warnings turned into errors the answer is still the 422, and no numpy
+    RuntimeWarning leaks to the caller in the default mode."""
+    data, _ = OVERFLOW_CASES[name]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(MainpipeTransientValidationError) as info:
+            solve(data)
+    assert str(info.value) == UNREPRESENTABLE
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pytest.raises(MainpipeTransientValidationError):
+            solve(data)
+    assert caught == []
 
 
 def test_v20b_floating_point_error_is_also_422(monkeypatch):
@@ -306,14 +348,31 @@ def test_v20d_nan_without_overflow_is_still_500(monkeypatch, caplog, where):
 
 
 # --------------------------------------------------------------------------- examples unchanged
+# The 12 examples delivered with v0.1.0 (a04431e), by name: phase 8 adds three more (F7-03).
+V010_EXAMPLES = (
+    "error-campo-retirado-densidad",
+    "error-duracion-insuficiente",
+    "error-ley-no-creciente",
+    "error-ley-sin-cierre",
+    "error-perfil-no-creciente",
+    "error-tope-de-pasos",
+    "solve-excel-horizontal",
+    "solve-perfil-loma",
+    "solve-pn-superado",
+    "solve-regimen-negativo",
+    "solve-sin-friccion-ok",
+    "solve-subatmosferica-warning",
+)
 EXAMPLES_DIR = Path(REPO) / "portal" / "examples"
 EXAMPLES = {
-    p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(EXAMPLES_DIR.glob("*.json"))
+    cid: json.loads((EXAMPLES_DIR / f"{cid}.json").read_text(encoding="utf-8"))
+    for cid in V010_EXAMPLES
+    if (EXAMPLES_DIR / f"{cid}.json").exists()
 }
 
 
 def test_the_twelve_examples_of_v010_are_all_here():
-    assert len(EXAMPLES) == 12
+    assert sorted(EXAMPLES) == sorted(V010_EXAMPLES)
 
 
 @pytest.mark.parametrize("cid", sorted(EXAMPLES))

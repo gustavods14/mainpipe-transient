@@ -78,7 +78,11 @@ def solve(data: dict[str, Any]) -> dict[str, Any]:
         raise MainpipeTransientComputationError(_UNEXPECTED_MESSAGE) from exc
 
     try:
-        response = _compute(request)
+        # numpy reports overflow and invalid operations through the caller's warning filters;
+        # with "error" filters the U-44 422 would turn into a 500 (F7-02). The guard reads the
+        # values themselves, so the reports are silenced here; numbers are not affected.
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore", under="ignore"):
+            response = _compute(request)
         return response.model_dump(mode="json")
     except MainpipeTransientError:
         raise
@@ -119,6 +123,29 @@ def _compute(req: SolveRequest) -> SolveResponse:
         frame_steps=None if frames is None else frames.steps,
     )
     der = res.derived
+
+    # Lists rounded to 3 decimals when the response is built (U-39 (1), D-63 (1)).
+    rounded: dict[str, np.ndarray] = {
+        "head_valve_m": res.head_valve_m,
+        "head_midpoint_m": res.head_midpoint_m,
+        "pressure_head_valve_m": res.pressure_head_valve_m,
+        "pressure_head_midpoint_m": res.pressure_head_midpoint_m,
+        "flow_reservoir_lps": _LPS_PER_M3S * res.flow_reservoir_m3s,
+        "flow_valve_lps": _LPS_PER_M3S * res.flow_valve_m3s,
+        "x_m": mesh.station_x_m,
+        "elevation_m": mesh.station_elevation_m,
+        "head_initial_m": res.head_initial_m,
+        "pressure_head_initial_m": res.pressure_head_initial_m,
+        "head_max_m": res.head_max_m,
+        "head_min_m": res.head_min_m,
+        "pressure_head_max_m": res.pressure_head_max_m,
+        "pressure_head_min_m": res.pressure_head_min_m,
+    }
+    stride = None if frames is None else frames.stride
+    frame_arrays = _frame_arrays(res, stride)
+    # U-44 (2), first pass: every list of the response, before the global extremes are
+    # searched in them (an inf chainage makes the envelopes NaN and the search fail, F7-01).
+    _ensure_representable([], [res.time_s, *rounded.values(), *frame_arrays.values()])
 
     h_vmax, t_vmax = res.head_valve_max()
     h_vmin, t_vmin = res.head_valve_min()
@@ -171,33 +198,12 @@ def _compute(req: SolveRequest) -> SolveResponse:
         "moc_head_rise_valve_m": th.moc_head_rise_valve_m,
         "theory_deviation_pct": th.theory_deviation_pct,
     }
-    # Lists rounded to 3 decimals when the response is built (U-39 (1), D-63 (1)).
-    rounded: dict[str, np.ndarray] = {
-        "head_valve_m": res.head_valve_m,
-        "head_midpoint_m": res.head_midpoint_m,
-        "pressure_head_valve_m": res.pressure_head_valve_m,
-        "pressure_head_midpoint_m": res.pressure_head_midpoint_m,
-        "flow_reservoir_lps": _LPS_PER_M3S * res.flow_reservoir_m3s,
-        "flow_valve_lps": _LPS_PER_M3S * res.flow_valve_m3s,
-        "x_m": mesh.station_x_m,
-        "elevation_m": mesh.station_elevation_m,
-        "head_initial_m": res.head_initial_m,
-        "pressure_head_initial_m": res.pressure_head_initial_m,
-        "head_max_m": res.head_max_m,
-        "head_min_m": res.head_min_m,
-        "pressure_head_max_m": res.pressure_head_max_m,
-        "pressure_head_min_m": res.pressure_head_min_m,
-    }
-    stride = None if frames is None else frames.stride
-    frame_arrays = _frame_arrays(res, stride)
     # Check fields not already above: the steady minimum and the first crossing (§1.5).
     check_values = [
         v for e in (steady_min, first_below) if e is not None for v in (e.value_m, e.x_m, e.time_s)
     ]
-    _ensure_representable(
-        [*scalars.values(), *check_values],
-        [res.time_s, *rounded.values(), *frame_arrays.values()],
-    )
+    # U-44 (2), second pass: scalars and check fields, before the checks are built.
+    _ensure_representable([*scalars.values(), *check_values], [])
 
     checks = build_checks(
         pressure_max=p_max,
