@@ -63,11 +63,17 @@ def derive(pipe: PipeData, mesh: Mesh) -> Derived:
     d, a, f, g = pipe.diameter_m, pipe.wave_speed_ms, pipe.friction_factor, pipe.gravity_ms2
     area = math.pi * d**2 / 4.0
     v0 = pipe.initial_flow_m3s / area
+    b = a / (g * area)
+    if b == 0.0:
+        # a > 0 and D > 0, so B = 0 is an underflow (tiny a, huge or overflowing A). The MOC
+        # loop divides by B with numpy, which gives NaN silently instead of raising (F7R-01).
+        # Raise like a Python division would: U-44 (1) turns it into the 422.
+        raise FloatingPointError("wave constant B = a/(g*A) underflows to 0")
     return Derived(
         area_m2=area,
         velocity_initial_ms=v0,
         head_loss_m=f * mesh.length_m * v0**2 / (2.0 * g * d),
-        wave_constant=a / (g * area),
+        wave_constant=b,
         friction_constant=f * mesh.dx_m / (2.0 * g * d * area**2),
         friction_number=f * mesh.dx_m * v0 / (2.0 * d * a),
         reflection_time_s=2.0 * mesh.length_m / a,

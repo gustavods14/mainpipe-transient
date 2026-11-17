@@ -225,6 +225,38 @@ OVERFLOW_CASES["chainage_overflow_profile"] = (
 )
 
 
+# F7R-01 (phase 7 re-verification): tiny a and huge D make B = a/(g*A) underflow to 0; the
+# MOC divided by it with numpy and got NaN without any inf, a 500 in v0.1.0 and 6720689.
+# U-44 (1): a value that underflows to 0 and is divided by is a 422 (FloatingPointError).
+_Q = 1e143
+_TINY_B = dict(
+    darcy_friction_factor=0.0,
+    wave_speed_ms=1e-190,
+    inner_diameter_mm=1e73,
+    initial_flow_lps=_Q,
+    closure_flow_lps=[_Q, _Q / 2, _Q / 5, 0.0, 0.0, 0.0, 0.0, 0.0],
+    duration_s=None,
+)
+for _pn in (1.0, 25.0, 100.0):
+    OVERFLOW_CASES[f"wave_constant_underflow_pn{_pn:g}"] = (
+        case(**_TINY_B, pn_bar=_pn),
+        FloatingPointError,
+    )
+OVERFLOW_CASES["wave_constant_underflow_no_frames_f1e-200"] = (
+    case(**{**_TINY_B, "darcy_friction_factor": 1e-200}, include_frames=False),
+    FloatingPointError,
+)
+OVERFLOW_CASES["wave_constant_underflow_profile"] = (
+    {
+        **{k: v for k, v in case(**_TINY_B).items() if k not in ("length_m", "pipe_elevation_m")},
+        "geometry": "profile",
+        "profile_x_m": [0.0, 400.0, 1000.0],
+        "profile_z_m": [0.0, 10.0, 0.0],
+    },
+    FloatingPointError,
+)
+
+
 @pytest.mark.parametrize("name", sorted(OVERFLOW_CASES))
 def test_v20b_non_representable_result_is_422(name):
     data, cause = OVERFLOW_CASES[name]
