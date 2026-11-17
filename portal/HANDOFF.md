@@ -17,7 +17,7 @@
 | 0 | Inicio | aprobada | 2026-11-14 | `portal/HANDOFF.md` | 3.0.0 |
 | 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.1 |
 | 2 | Plan (G2) | aprobada | 2026-11-16 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.1 |
-| 3 | Prototipo (G3) | reabierta | 2026-11-15 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.0 |
+| 3 | Prototipo (G3) | aprobada | 2026-11-16 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.1 |
 | 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
 | 5 | Construcción (G5) | pendiente | — | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | — |
 | 6 | Entrega | pendiente | — | commit nuevo + etiqueta (v0.1.0 = `a04431e` sigue integrable) | — |
@@ -218,3 +218,11 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   pasa a 0.2.0 y no hay pedido al portal (U-45). Ningún DR abierto. Siguiente: `hie-prototyper`
   pone la `validation` de `pn_bar` en [1, 100] en `portal/ui-spec.json` (G3); después
   `hie-architect` vuelve a congelar el plan y pasa U-43 … U-45 a vigentes (G4).
+- 2026-11-16: **G3 aprobada de nuevo con la enmienda F5R-02** (kit 3.0.1). `hie-prototyper`
+  cambió la `validation` de `pn_bar` en `portal/ui-spec.json` a `min: 1, max: 100` (el esquema
+  los lee como incluidos, U-43), con la ayuda «1 ≤ PN ≤ 100 bar.», y subió `kit_version` a
+  3.0.1. En `portal/prototype.html` añadió la misma ayuda y el estado de error de entrada con los
+  dos mensajes de U-43 (con `repr` cuando el valor redondeado coincide con el límite). Esquema
+  validado con jsonschema contra `06-ui-spec.schema.json`. El uso aprobado no cambia; sin huecos
+  del contrato ni DR. Siguiente: `hie-architect` vuelve a congelar el plan, pasa U-43 … U-45 a
+  vigentes y la G4 se aprueba sin sesión del portal (ningún DR abierto).

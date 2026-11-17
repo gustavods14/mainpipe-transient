@@ -1,6 +1,6 @@
 {
   "spec_version": "1.0",
-  "kit_version": "3.0.0",
+  "kit_version": "3.0.1",
   "slug": "mainpipe-transient",
   "layout": "solver-2col",
   "inputs": {
@@ -97,8 +97,10 @@
             "type": "number",
             "contract_path": "request.pn_bar",
             "placeholder": "25",
+            "hint": "1 ≤ PN ≤ 100 bar.",
             "validation": {
-              "min": 0,
+              "min": 1,
+              "max": 100,
               "required": true
             }
           },

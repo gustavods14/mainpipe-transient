@@ -6,8 +6,9 @@
 <title>Golpe de ariete — wireframe</title>
 <!--
   PROTOTIPO DESECHABLE · mainpipe-transient · etapa 3 (G3) · nivel WIREFRAME
-  Kit de integración upstream: 3.0.0 · Fecha: 2026-11-14 · enmienda 2026-11-15 (contrato 2.0:
-  sin ρ ni g, listas a 3 decimales, sin frame_pressure_head_m, sin texto de fase)
+  Kit de integración upstream: 3.0.1 · Fecha: 2026-11-14 · enmienda 2026-11-15 (contrato 2.0:
+  sin ρ ni g, listas a 3 decimales, sin frame_pressure_head_m, sin texto de fase) · enmienda
+  F5R-02 2026-11-16 (pn_bar entre 1 y 100 bar, U-43)
   Tokens: copiados literalmente de C:/Dev/web_apps/frontend/src/index.css
           (bloques :root —shell oscuro— y .theme-light —workspace—).
   Especificación que perdura: portal/ui-spec.json. Este HTML solo sirve para validar el uso.
@@ -577,7 +578,7 @@ details.collap[open] .sum-k { display: none; }
     </select>
   </label>
   <span class="proto-tag">datos ficticios</span>
-  <span class="proto-tag">kit 3.0.0</span>
+  <span class="proto-tag">kit 3.0.1</span>
   <span class="proto-tag">sin «service»: no hay servicio externo</span>
 </div>
 
@@ -651,6 +652,7 @@ details.collap[open] .sum-k { display: none; }
           <label for="pn_bar">Presión nominal<span class="sym">PN</span></label>
           <input class="inp" id="pn_bar" inputmode="decimal" value="25">
           <span class="unit">bar</span>
+          <span class="hint">1 ≤ PN ≤ 100 bar.</span>
         </div>
 
         <div class="group-h">Régimen inicial</div>
@@ -1295,12 +1297,21 @@ $('useProfile').addEventListener('click', () => {
 $('initial_flow_lps').addEventListener('input', () => { law.q[0] = num('initial_flow_lps'); renderLaw(); drawLaw(); });
 $('lawAdd').addEventListener('click', () => { if (law.t.length >= 20) return; law.t.push(+(law.t[law.t.length - 1] + 1).toFixed(2)); law.q.push(0); renderLaw(); drawLaw(); });
 $('profAdd').addEventListener('click', () => { if (prof.x.length >= 500) return; prof.x.push(prof.x[prof.x.length - 1] + 100); prof.z.push(prof.z[prof.z.length - 1]); renderTable($('profBody'), prof, 'x', 'z', drawProf); drawProf(); });
+// Mensajes 422 de U-43 (enmienda F5R-02). {v} con hasta 10 cifras significativas; si coincide
+// con el límite nombrado, la cifra más corta que identifica el número (repr), p. ej. 100.00000000001.
+function pnRangeMsg(v) {
+  const over = v > 100, lim = over ? '100' : '1';
+  let txt = String(+v.toPrecision(10));
+  if (txt === lim) txt = String(v);
+  return `pn_bar = ${txt} bar está fuera de rango: ${over ? 'supera el máximo de 100 bar' : 'es menor que el mínimo de 1 bar'}. El timbraje (PN) debe estar entre 1 y 100 bar.`;
+}
 $('btnCalc').addEventListener('click', () => {
   // Validación mínima del boceto para enseñar el estado de error input.
   const req = ['reservoir_level_m', 'inner_diameter_mm', 'wave_speed_ms', 'darcy_friction_factor', 'pn_bar', 'initial_flow_lps'];
   const missing = req.find((id) => !Number.isFinite(num(id)));
   let err = null;
   if (missing) err = `${missing}: campo obligatorio.`;
+  else if (num('pn_bar') > 100 || num('pn_bar') < 1) err = pnRangeMsg(num('pn_bar'));
   else if (law.q[law.q.length - 1] !== 0) err = `La ley de cierre debe terminar con la válvula cerrada: el último caudal (${fmt(law.q[law.q.length - 1], 1)} L/s en t = ${fmt(law.t[law.t.length - 1], 1)} s) debe ser 0 L/s.`;
   setState('loading'); $('stateSel').value = 'loading';
   setTimeout(() => {
