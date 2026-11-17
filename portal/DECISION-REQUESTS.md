@@ -34,6 +34,11 @@
 > cuatro decisiones eligen la alternativa (a) y caben en el plan (U-36, U-42, U-34 (6)). Queda
 > pendiente la frase del rojo en `portal/ui-spec.json` / `portal/prototype.html`
 > (`hie-prototyper`) y lo de la construcción (`hie-api`), en la tabla del final.
+> 2026-11-16: **enmienda F5R-02** (posterior a la entrega v0.1.0: `pn_bar` en [1, 100] bar,
+> resultados no representables → 422, `SCHEMA_VERSION` sigue en `"2.0"`; plan U-43 … U-45).
+> **Ningún pedido nuevo**: el rango de una entrada y los mensajes de error los decide el upstream
+> (regla central del kit) y no se toca D-57 … D-66 (plan §7, U-45 (4)). Comprobado al re-congelar el
+> plan (G4 del 2026-11-16): DR-1 … DR-10 `resuelto` con su `D-NN`, ninguno `abierto`.
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|

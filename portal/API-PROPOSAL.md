@@ -2,9 +2,10 @@
 
 > **Propuesta**, no contrato. La Capa 2 la fija `software-architect` del portal en
 > `doc/apps/mainpipe-transient/API.md`. Convención vigente: `doc/upstream-kit/03-portal-api.md`.
-> Contrato de Capa 1 en el que se apoya: `doc/plans/01-golpe-ariete-v1.md` §1 (kit 3.0.0,
-> `SCHEMA_VERSION` **`"2.0"`, congelada el 2026-11-15** en la nueva G4 tras la enmienda; antes
-> `"1.0"`, congelada el 2026-11-14).
+> Contrato de Capa 1 en el que se apoya: `doc/plans/01-golpe-ariete-v1.md` §1 (kit 3.0.1,
+> `SCHEMA_VERSION` **`"2.0"`, congelada el 2026-11-15** en la nueva G4 tras la enmienda y
+> confirmada sin cambio en la G4 de la enmienda F5R-02, 2026-11-16; antes `"1.0"`, congelada el
+> 2026-11-14).
 > 2026-11-14: actualizada con D-57 (sin `frame_flow_lps`, `MAX_STEPS` = 10 000, tamaños), D-60
 > (eco `min_allowed_pressure_head_m`) y D-62 (sin IA).
 > 2026-11-15: actualizada con la enmienda tras G4: sin `density_kgm3` ni `gravity_ms2` en la
@@ -15,6 +16,10 @@
 > endpoint, router sin transformar la respuesta). Al día con D-63 (redondeo hecho por el paquete),
 > D-64 (sin `frame_pressure_head_m`; invariantes de la serie) y D-65 (tope de fotogramas y dos
 > recetas de tamaño).
+> 2026-11-16: al día con la enmienda F5R-02 (plan U-43 … U-45; paquete 0.2.0, contrato 2.0 sin
+> cambio): `pn_bar` en [1, 100] bar y un resultado no representable da 422 en lugar de 500 (mapeo
+> de errores). Cifras de tamaño y tiempo de la 2.0, medidas en la construcción (antes estimadas).
+> La Capa 2 no cambia.
 
 ## Endpoints
 
@@ -47,8 +52,8 @@ Distribución en `backend/requirements.txt`:
 
 | Excepción | HTTP | Cuándo |
 |---|---|---|
-| `MainpipeTransientValidationError` | 422 | Entrada que no permite calcular: rangos (diámetro, celeridad ≤ 1500 m/s, f ≤ 0.1, PN, presión mínima admisible en [−10.33, 0]), campos retirados en la 2.0 (`density_kgm3`, `gravity_ms2`: el mensaje dice que ρ = 1000 kg/m³ y g = 9.81 m/s² son fijas y pide quitar el campo, plan U-40), ley de cierre mal formada (no empieza en 0 s, no creciente, primer caudal ≠ Q₀, caudal fuera de 0–Q₀, no termina en Q = 0), perfil mal formado (no empieza en 0 m, no creciente, toma sobre el depósito, 2–500 puntos), datos de geometría cruzados, `n_reaches` impar o fuera de 10–200, duración < Tc + 2L/a, más de 10 000 pasos de cálculo con la duración pedida o la de por defecto (D-57; el mensaje da la duración máxima admisible con esa malla, HU-1.6 crit. 13), número de fricción del tramo > 0.5. Por la validación de FastAPI estos casos llegan normalmente como el 422 del framework con el mensaje del validador en español (`kit 02 §3`); la excepción cubre las llamadas directas |
-| `MainpipeTransientComputationError` | 500 | Fallo interno no previsto (incluido un `NaN` al construir la respuesta). No debería ocurrir con entradas válidas |
+| `MainpipeTransientValidationError` | 422 | Entrada que no permite calcular: rangos (diámetro, celeridad ≤ 1500 m/s, f ≤ 0.1, PN en [1, 100] bar desde la 0.2.0 con dos mensajes, por encima del máximo y por debajo del mínimo (plan U-43), presión mínima admisible en [−10.33, 0]), campos retirados en la 2.0 (`density_kgm3`, `gravity_ms2`: el mensaje dice que ρ = 1000 kg/m³ y g = 9.81 m/s² son fijas y pide quitar el campo, plan U-40), ley de cierre mal formada (no empieza en 0 s, no creciente, primer caudal ≠ Q₀, caudal fuera de 0–Q₀, no termina en Q = 0), perfil mal formado (no empieza en 0 m, no creciente, toma sobre el depósito, 2–500 puntos), datos de geometría cruzados, `n_reaches` impar o fuera de 10–200, duración < Tc + 2L/a, más de 10 000 pasos de cálculo con la duración pedida o la de por defecto (D-57; el mensaje da la duración máxima admisible con esa malla, HU-1.6 crit. 13), número de fricción del tramo > 0.5. Por la validación de FastAPI estos casos llegan normalmente como el 422 del framework con el mensaje del validador en español (`kit 02 §3`); la excepción cubre las llamadas directas. **Desde la 0.2.0, además**: entradas admitidas pero de magnitud tan extrema que el resultado no es representable (un desbordamiento a ±inf o un error aritmético en el cálculo) dan 422 con el mensaje «El resultado del cálculo queda fuera del rango numérico representable: …» (plan U-44, antes 500). Este caso no lo ve la validación de FastAPI: llega por el `http_status` de la excepción, sin el prefijo «Value error, » |
+| `MainpipeTransientComputationError` | 500 | Fallo interno no previsto (incluido un `NaN` sin desbordamiento al construir la respuesta). No debería ocurrir con entradas válidas |
 | `MainpipeTransientServiceError` | — | No existe: el paquete no llama a servicios externos |
 
 Un resultado que calcula pero no cumple (PN superado, depresión, riesgo de separación de columna,
@@ -150,22 +155,21 @@ En la 2.0: listas a 3 decimales hechas por el paquete (D-63), una sola matriz de
 con el tope de hoy, min(1001, ⌊50 000 / n_progresivas⌋) = 50 000 celdas (D-65 (1)-(2)).
 
 - Tiempo: < 1 s en el caso más grande admitido (N = 200, 500 vértices, 10 000 pasos); medido en el
-  upstream con el contrato 1.0: mediana 0.147 s con fotogramas (plan U-38). Se vuelve a medir con la
-  2.0. Sin necesidad de cambio en el backend.
-- Respuesta, contrato 1.0 (medido en la fase 5, U-34): peor caso 3 167 900 B; caso del Excel
-  355 716 B con fotogramas y 48 149 B sin ellos.
-- Respuesta, contrato 2.0 (estimado; el dueño lo midió con un prototipo del redondeo): peor caso
-  ≈ 0,96 MB (963 538 B); caso del Excel con fotogramas ≈ 89 kB (88 604 B). **Cota absoluta** para
-  cualquier entrada admitida, incluidas magnitudes absurdas: ≈ 3,2 MB `[calculado]` (25 B por
-  número como máximo, plan §2 y U-34 (3b)). Se miden en la construcción **dos recetas
-  deterministas** —el peor caso realista y uno con magnitudes extremas admitidas—, ambas
-  ≤ 3 500 000 B; el techo vale para toda entrada admitida solo con esas mediciones (y la guarda del
-  portal que mide las mismas recetas) en verde, no con la cuenta (D-65 (3)-(4)).
-- Petición del peor caso (perfil de 500 filas, ley de 20): 19 919 B medidos con la 1.0, frente a
-  los 64 KiB de D-48; en la 2.0 lleva dos campos menos.
+  upstream con el contrato 2.0: mediana 0.243 s con fotogramas y redondeo (plan U-38; 0.147 s con
+  la 1.0). Sin necesidad de cambio en el backend. La guarda de la 0.2.0 (U-44) se vuelve a medir en
+  su construcción.
+- Respuesta, contrato 2.0 (medido en la fase 5 rehecha, plan U-34): peor caso realista 965 887 B;
+  entrada adversaria de magnitudes extremas 2 819 475 B; caso del Excel 90 471 B con fotogramas y
+  24 039 B sin ellos. **Cota absoluta** para toda entrada admitida: 3 285 874 B (25 B por número
+  como máximo, plan §2 y U-34 (3b)). Las dos cifras medidas son de dos recetas concretas, no el
+  máximo; D-57 (1) se da por cumplido para toda entrada admitida solo con la guarda de D-57 (2) del
+  portal en verde, que mide las dos recetas (D-65 (4)). La 0.2.0 no cambia ninguna de estas cifras.
+  Registro de la 1.0: peor caso 3 167 900 B.
+- Petición del peor caso (perfil de 500 filas, ley de 20): 19 919 B medidos, frente a los 64 KiB de
+  D-48.
 - **Cifras medidas**: las de D-57 (1) —las dos recetas de D-65 (3)— y (10), en bytes y desde el
-  paquete instalado, van a `portal/INTEGRATION.md` en la entrega, con la cota absoluta y las dos
-  recetas deterministas para que la guarda de `backend/tests/` (D-57 (2)) mida las mismas entradas
+  paquete instalado, están en `portal/INTEGRATION.md`, con la cota absoluta y las dos recetas
+  deterministas para que la guarda de `backend/tests/` (D-57 (2)) mida las mismas entradas
   (plan U-34).
 - Casos dorados: solo `solve-excel-horizontal` lleva la serie; los demás, `include_frames: false`
   (D-57 (8)).

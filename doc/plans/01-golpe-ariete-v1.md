@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| estado | **borrador (enmienda F5R-02)** — 2026-11-15, tras la entrega v0.1.0 (pin `a04431e`), pendiente de G2 y de una nueva G4. La enmienda solo toca el rango de `pn_bar` (U-43), los resultados no representables (U-44) y el versionado y la entrega (U-45): §1.3 (fila `pn_bar` y sus mensajes), §1.4 (timbraje), §1.6, fases 7 y 8, V-12 y V-20. **Todo lo demás del contrato 2.0 sigue congelado** tal como quedó en la G4 del 2026-11-15, y `SCHEMA_VERSION` sigue en **`"2.0"`** (U-45). Antes: congelado el 2026-11-15 en la nueva G4 con `"2.0"` (DR-7 … DR-10 resueltos, D-63 … D-66); congelado el 2026-11-14 en G4 con `"1.0"`. Toda enmienda posterior sigue `kit 01 §8` y U-37 |
-| kit | 3.0.1 (adoptada el 2026-11-15, F6-04; diseñado y congelado con 3.0.0. La 3.0.1 es un *patch* que solo reescribe `kit 03 §1` y `§3` (IA) sin cambiar ninguna regla para el upstream; las citas del plan a `kit 03 §1` siguen valiendo y la app no tiene IA, D-62). La enmienda F5R-02 se redacta con 3.0.1 |
-| fecha | 2026-11-15 (enmienda F5R-02, borrador); 2026-11-15 (congelado 2.0); 2026-11-14 (congelado 1.0) |
+| estado | **congelado** — 2026-11-16, G4 de la enmienda F5R-02 (`SCHEMA_VERSION` **`"2.0"`**, sin cambio de forma, U-45; `__version__` 0.2.0 al construir). La enmienda, tras la entrega v0.1.0 (pin `a04431e`), solo toca el rango de `pn_bar` (U-43), los resultados no representables (U-44) y el versionado y la entrega (U-45): §1.1, §1.3 (fila `pn_bar` y sus mensajes), §1.4 (timbraje), §1.6, fases 7 y 8, V-12 y V-20. El resto del contrato 2.0 es el que se congeló en la G4 del 2026-11-15. Antes: borrador (enmienda F5R-02) del 2026-11-15 al 2026-11-16; congelado el 2026-11-15 en la nueva G4 con `"2.0"` (DR-7 … DR-10 resueltos, D-63 … D-66); congelado el 2026-11-14 en G4 con `"1.0"`. Toda enmienda posterior sigue `kit 01 §8` y U-37 |
+| kit | 3.0.1 (adoptada el 2026-11-15, F6-04; diseñado y congelado con 3.0.0. La 3.0.1 es un *patch* que solo reescribe `kit 03 §1` y `§3` (IA) sin cambiar ninguna regla para el upstream; las citas del plan a `kit 03 §1` siguen valiendo y la app no tiene IA, D-62). La enmienda F5R-02 se redacta y se congela con 3.0.1 |
+| fecha | 2026-11-16 (congelado, enmienda F5R-02); 2026-11-15 (enmienda F5R-02, borrador); 2026-11-15 (congelado 2.0); 2026-11-14 (congelado 1.0) |
 | historias | `doc/stories/00-epica.md` … `04-serie-reproduccion.md` (reaprobadas en G1 el 2026-11-15 con la enmienda: precisión de las listas, sin `frame_pressure_head_m`, sin texto de fase, ρ y g constantes; y de nuevo el mismo día con la enmienda F5R-02: HU-1.6 crit. 14, fila `pn_bar`, épica pregunta 11, HU-2.3 crit. 1 con el literal del paquete) |
 | pedidos al portal | `portal/DECISION-REQUESTS.md`: DR-1 … DR-6 resueltos (D-57 … D-62, commit `2466321` del portal); DR-7 … DR-10 resueltos (D-63 … D-66, alternativa (a) en los cuatro; commit `29593af` del portal). La enmienda F5R-02 **no abre pedidos** (U-45 (4)). Ningún pedido abierto |
 | propuesta de Capa 2 | `portal/API-PROPOSAL.md` |
-| decisiones internas | `doc/DECISIONS.md` (U-01 … U-45; U-43 … U-45 propuestas hasta G2) |
+| decisiones internas | `doc/DECISIONS.md` (U-01 … U-45; U-43 … U-45 vigentes desde G2 del 2026-11-16 y congeladas en la G4 del mismo día) |
 
 ---
 
@@ -90,8 +90,8 @@ enmienda F5R-02 añade las fases 7 y 8 sin rehacer ninguna de las anteriores.
 de columna o el porcentaje del PN salen «infinito») y el portal mostraría «error del servidor: el
 cálculo falló en el servidor, no en tus datos», que es falso: fallan los datos.
 
-**Qué se decide** (el tope lo decidió el dueño; lo demás lo propone el plan y el dueño lo acepta
-en esta G2):
+**Qué se decide** (el tope lo decidió el dueño; lo demás lo propuso el plan y el dueño lo aceptó
+en G2 el 2026-11-16; congelado en la G4 del mismo día):
 
 | # | Decisión | Por qué |
 |---|---|---|
@@ -104,7 +104,8 @@ propio programa produjera un «infinito» con datos normales; un fallo que dé �
 (`NaN`) sin infinitos sigue saliendo como error del servidor. Las pruebas comprueban que con todos
 los ejemplos y las recetas de la báscula esa guarda no salta.
 
-**Puntos que el dueño acepta en esta G2** (cada uno con su alternativa, si no lo acepta):
+**Puntos que el dueño aceptó en G2 el 2026-11-16** (los tres, sin pedido al portal; se conservan
+con sus alternativas como registro):
 
 1. **Cota inferior de 1 bar, inclusiva** (U-43). Alternativas: 0.1 bar (misma garantía numérica,
    pero admite PN sin sentido) o 2.5 bar (la clase normalizada mínima, pero rechaza PN rebajados).
@@ -117,13 +118,20 @@ los ejemplos y las recetas de la báscula esa guarda no salta.
    debajo de 10¹⁵⁰, dejaría fuera la receta absurda que el portal pesa en su báscula (D-65 (3)), lo
    que exige un pedido al portal. El plan no lo decide.
 3. **Versionado** (U-45): `SCHEMA_VERSION` sigue en `"2.0"` y `__version__` pasa a 0.2.0, sin
-   pedido. Si el dueño prefiere que lo confirme el portal, el plan redacta un pedido (DR-11) antes
-   de la nueva G4.
+   pedido. (La alternativa era que lo confirmara el portal con un DR-11 antes de la nueva G4; el
+   dueño no lo pidió, y en la G4 del 2026-11-16 se comprobó que no hay ningún pedido abierto.)
 
 **Qué se construye** (Parte 2 §5): la fase 7 (el rango, los mensajes, la guarda y sus pruebas) y
 la fase 8 (entrega 0.2.0: ejemplos regenerados y tres nuevos, `portal/INTEGRATION.md`, etiqueta).
-Además, `hie-prototyper` pone el rango 1–100 en el formulario (`portal/ui-spec.json`). Hasta la
-nueva entrega, la v0.1.0 (`a04431e`) sigue siendo válida para el portal.
+Además, `hie-prototyper` puso el rango 1–100 en el formulario (`portal/ui-spec.json`, G3 del
+2026-11-16). Hasta la nueva entrega, la v0.1.0 (`a04431e`) sigue siendo válida para el portal.
+
+**Una advertencia para esta G4.** Al congelar se vio que la Parte 2 del borrador no recogía todavía
+la enmienda en las secciones que la cabecera citaba (§1.3 seguía diciendo «PN > 0», faltaban las
+fases 7 y 8 y la prueba V-20): lo aprobado en G2 era esta Parte 1 y las decisiones U-43 … U-45 de
+`doc/DECISIONS.md`. Se han escrito ahora en la Parte 2 transcribiendo esas decisiones, sin añadir
+nada que no estuviera en ellas salvo los nombres de los dos ejemplos nuevos de PN y el detalle de
+las pruebas. Conviene leerlas antes de aprobar la G4 (changelog, entrada del 2026-11-16).
 
 ## La enmienda del 2026-11-15 y lo que decidió el portal (D-63 … D-66)
 
@@ -272,6 +280,18 @@ resueltos (D-63 … D-66) y ningún pedido abierto. La regla de enmienda posteri
 (U-37), y las decisiones del portal que obligan a un `DR` nuevo si se tocan son ahora D-57 …
 D-66.
 
+**Enmienda F5R-02, congelada en la G4 del 2026-11-16: `SCHEMA_VERSION` sigue en `"2.0"`** (U-45).
+Cambia qué valores de `pn_bar` se admiten (U-43, §1.3) y que una entrada cuyo resultado no es
+representable dé 422 y no 500 (U-44, §1.6). Ninguno de los dos cambia campos, tipos ni unidades,
+que es la «forma» que versiona `SCHEMA_VERSION` (`kit 01 §3`): con un PN admitido la respuesta es
+bit a bit la de v0.1.0; un PN fuera de [1, 100] que antes calculaba ahora es 422, y una entrada
+extrema que antes daba 500 ahora da 422. Cambian qué entradas se admiten y la clase de una
+excepción, no los campos de la petición ni de la respuesta. `kit 01 §8` («cambiar la Capa 1 exige … subir `SCHEMA_VERSION`») se lee con esa
+definición, igual que U-37 («cambiar un número sin cambiar la forma no sube `SCHEMA_VERSION`»);
+la ambigüedad entre las dos secciones va como hallazgo para el kit (§8). Sube `__version__`, de
+0.1.0 a **0.2.0** (semver 0.x, menor: se rechazan entradas antes admitidas), con entrega nueva
+(fases 7 y 8). No toca D-57 … D-66: sin `DR`.
+
 ### 1.2 Unidades del contrato (U-06)
 
 Las del `kit 01 §4`, con la unidad en el nombre. Caudales en **L/s**, diámetro en **mm**,
@@ -307,7 +327,7 @@ FastAPI llegue en español (`kit 02 §3`). Los rangos se repiten en `description
 | `darcy_friction_factor` | `float` | — | — | 0 ≤ f ≤ 0.1 | 1.6-7 |
 | `initial_flow_lps` | `float` | L/s | — | > 0 | 1.6-7 |
 | `reservoir_level_m` | `float` | m | — | cualquiera (mismo datum que la tubería) | 1.1 |
-| `pn_bar` | `float` | bar | — | > 0 | 3.1 |
+| `pn_bar` | `float` | bar | — | **1 ≤ PN ≤ 100**, ambos incluidos (U-43; antes «> 0»). Dos mensajes, abajo | 1.6-7, 1.6-14, 3.1 |
 | `min_allowed_pressure_head_m` | `float` | m.c.a. | `-10.0` | −10.33 ≤ valor ≤ 0 (U-21) | 3.2 |
 | `closure_time_s` | `list[float]` | s | — | 2–20 puntos; `[0] = 0`; estrictamente creciente | 1.2, 1.6 |
 | `closure_flow_lps` | `list[float]` | L/s | — | igual longitud; `|[0] − Q₀| ≤ 0.1 %·Q₀`; 0 ≤ Q ≤ Q₀; último = 0 | 1.2, 1.6 |
@@ -338,6 +358,19 @@ Reglas cruzadas adicionales, todas 422 y en el validador del modelo:
   ρ = 1000 kg/m³. Quite el campo de la petición.» y «gravity_ms2: la gravedad ya no es un dato de
   entrada; el cálculo usa g = 9.81 m/s². Quite el campo de la petición.» (ambos si vienen los dos).
   Cualquier otro campo desconocido sigue con el 422 de `extra="forbid"` (U-23).
+- **Rango de `pn_bar`** (U-43, enmienda F5R-02; HU-1.6 crits. 7 y 14). Validador propio (U-13) que
+  sustituye al de «> 0»; fuera de [1, 100], 422 con uno de dos mensajes:
+  - por encima: «pn_bar = {v} bar está fuera de rango: supera el máximo de 100 bar. El timbraje
+    (PN) debe estar entre 1 y 100 bar.»
+  - por debajo, incluidos 0 y negativos: «pn_bar = {v} bar está fuera de rango: es menor que el
+    mínimo de 1 bar. El timbraje (PN) debe estar entre 1 y 100 bar.»
+
+  {v} con el formato de eco de U-26 (hasta 10 cifras significativas); si ese texto coincide con el
+  límite nombrado («100» o «1»), se escribe `repr(v)`, para que el mensaje nunca diga «100 bar
+  supera el máximo de 100 bar» (p. ej. 100.00000000001 o 0.99999999999). `description` del campo:
+  «Pipe pressure rating PN (bar). 1 <= PN <= 100.». M18 y la fórmula de
+  `pressure_max_pn_ratio_pct` no cambian. Como todo validador propio, el texto llega en español
+  también por el 422 de FastAPI (con el prefijo «Value error, », `kit 02 §3`).
 
 Mensajes: en español, con unidades, decimales con punto y el punto exacto que falla (`kit 02 §3`;
 textos de HU-1.6 y HU-2.3). Formato numérico común en U-26.
@@ -434,6 +467,10 @@ U-39)
 límite usado (el enviado o −10.0 por defecto), siempre presente (U-35). Con `pn_head_m` es lo que
 la pantalla necesita para dibujar las dos líneas de umbral y marcar sus cruces con el predicado de
 §1.5 (D-60) sin leer el formulario, que puede haber cambiado tras el cálculo (D-58 (3)).
+Con PN en [1, 100] (U-43), `pn_head_m` ∈ [10.19, 1019.37] m.c.a. y es siempre finito; la razón es
+finita para todo |p_max| ≤ 1.79·10³⁰⁶ m, que cubre toda entrada con sentido físico y las recetas
+adversarias publicadas (≤ 10³⁰⁰ m, U-34). Si otras entradas de magnitud absurda la hacen desbordar,
+no hay respuesta: es el 422 de U-44 (§1.6), nunca un campo infinito (HU-1.6 crit. 14 d).
 
 **Referencia teórica** (informativa: nunca genera aviso ni cambia `status`, HU-3.4)
 
@@ -589,10 +626,31 @@ class MainpipeTransientComputationError(MainpipeTransientError):              # 
 
 No hay `MainpipeTransientServiceError`: el paquete no llama a ningún servicio externo (`kit 01 §6`,
 `kit 02 §1`). Sin subclases más finas en v1: toda la validación ocurre en el modelo, así que el
-nombre concreto que verá `examples/` es `MainpipeTransientValidationError`.
+nombre concreto que verá `examples/` es `MainpipeTransientValidationError` (también en los tres
+ejemplos nuevos de la fase 8).
 
-Un `NaN`/`inf` al construir la respuesta (no debería ocurrir: lo previene U-03) sale como
-`MainpipeTransientComputationError`.
+**Resultado no representable → 422** (U-44, enmienda F5R-02; HU-1.6 crit. 14 d). En `solve`, tras
+validar el modelo, se lanza `MainpipeTransientValidationError` (422), con `raise … from exc` cuando
+hay causa, en dos casos:
+
+1. el cálculo lanza `ArithmeticError` (`OverflowError` de `**` con `float` de Python,
+   `ZeroDivisionError` por un valor que subdesborda a 0, `FloatingPointError`);
+2. algún valor que va a la respuesta es ±inf (escalares, series, envolventes, fotogramas y campos de
+   `checks`, incluidos `pn_head_m` y `pressure_max_pn_ratio_pct`). La búsqueda se hace sobre los
+   valores de precisión completa, **antes** del redondeo de U-39 y de construir `SolveResponse`.
+
+Mensaje único: «El resultado del cálculo queda fuera del rango numérico representable: revisa las
+magnitudes extremas del nivel del depósito (reservoir_level_m), de las cotas (pipe_elevation_m o
+profile_z_m), de la longitud, del diámetro y del caudal inicial. Con valores de proyecto no se llega
+a este límite.» No es validación del modelo: FastAPI no la ve, y el 422 llega al portal por el
+`http_status` de la excepción (`kit 02 §1`), sin el prefijo «Value error, ».
+
+Un `NaN` **sin** desbordamiento (ni ±inf ni `ArithmeticError`) sigue saliendo como
+`MainpipeTransientComputationError` (500) al construir la respuesta (`allow_inf_nan=False`,
+`kit 01 §4`), igual que cualquier excepción no prevista (HU-1.6 crit. 11): sin desbordamiento, un
+`NaN` solo puede venir de un fallo del paquete. Riesgo residual aceptado por el dueño en G2: un fallo
+del paquete que produjera inf o `ArithmeticError` con datos normales saldría como este 422; V-20
+comprueba que con los ejemplos y las recetas de U-34 la guarda no salta.
 
 ## 2. Pureza y presupuesto de tiempo (`kit 01 §6`)
 
@@ -728,6 +786,13 @@ completa (`MocResult`); las pruebas que los leen **a través de `solve()`** camb
 (abajo). La fase 2 queda como registro: su parte de ρ y g y `SCHEMA_VERSION` = `"1.0"` la sustituye
 la fase 5.
 
+**Estado tras la enmienda F5R-02 (congelada el 2026-11-16).** Las fases 0–6 están entregadas y
+verificadas (v0.1.0, pin `a04431e`) y **no se rehacen**: la enmienda no toca el cálculo, la forma
+ni los números de la respuesta con un PN admitido. Se añaden la **fase 7** (rango de `pn_bar` y
+guarda de U-44, con sus pruebas) y la **fase 8** (entrega 0.2.0). El criterio de «hecho» de la
+fase 2 para HU-1.6 crit. 7 sobre el PN («PN ≤ 0 → 422») pasa a cumplirse con el mensaje «menor que
+el mínimo de 1 bar» de la fase 7.
+
 | Fase | Contenido | Hecho cuando (comprobable) | HU / V |
 |---|---|---|---|
 | **0. Andamiaje y referencia** | `pyproject.toml` (layout `src/`, `requires-python >=3.12`, `numpy>=1.24`, `pydantic>=2.6`), `py.typed`, `CHANGELOG.md`, excepciones, `solve` vacío. **Referencia del Excel (U-28)**: el `.xlsx` no guarda valores calculados (con `openpyxl` y `data_only=True` toda celda con fórmula sale `None`), así que `tools/extract_excel_reference.py` abre por COM (pywin32, solo dev, solo Windows) una **copia temporal** del libro, la recalcula en Excel y vuelca a `tests/reference/excel_case.json` las entradas, H y Q de todos los nodos en los 401 instantes (hoja `2_Malla_MOC`) y los valores de `4_Validacion`. El JSON se versiona con su bloque de procedencia (fecha, versión de Excel, SHA-256 del `.xlsx`, commit del script); el original no se modifica. Los tests solo leen el JSON | `pip install .` en un venv limpio de Python 3.12 funciona; `import mainpipe_transient` sin efectos; el JSON tiene 401 instantes × 21 nodos de H y Q sin ningún `null`, su SHA-256 de origen coincide con el `.xlsx` archivado, y reproduce los valores de control de V-05 (p. ej. H_v máx = 242.76384 m en t = 2.00 s); la suite corre sin Excel ni pywin32 instalados | — |
@@ -737,6 +802,8 @@ la fase 5.
 | **4. Verificaciones** | `_theory`, `_checks`, `status`, mensajes | V-11 … V-13 en verde; textos de HU-3.1-4 y HU-3.2-4 literales | HU-3.1 … 3.5 |
 | **5. Contrato 2.0 y serie para el reproductor** (rehecha tras la enmienda del 2026-11-15; se construye tras la nueva G4 del 2026-11-15, con D-63 … D-66) | En este orden, de más a menos riesgo: **(5.1) precisión** (U-39, D-63 (1)-(2)): una única función privada de redondeo a 3 decimales aplicada al construir `SolveResponse` a las listas de §1.4, desde los arrays de precisión completa; `time_s`, `frame_time_s`, escalares y **todos los campos de `checks`** intactos; ajuste a §6 (nota de tolerancias) de las pruebas de las fases 1–4 que leen listas a través de `solve()`. **(5.2) entrada 2.0** (U-40): `_constants.py`; fuera `density_kgm3` y `gravity_ms2` de `SolveRequest` con el 422 propio de §1.3; `SCHEMA_VERSION` = `"2.0"`; `CHANGELOG.md` con la entrada de la 2.0. **(5.3) serie** (U-10, U-11, U-24, U-42): solo `frame_head_m` y `frame_x_m`, sin `frame_pressure_head_m` (D-64) ni `frame_flow_lps` (U-33), con el tope de U-10 (D-65 (1)); los invariantes de D-64 (3) (§1.4) con sus pruebas, que sustituyen a las de la 1.0 que leían `frame_pressure_head_m` (`tests/test_frames.py`, HU-4.1 crit. 1–3). **(5.4) mediciones** con `tools/measure_payload.py` (protocolo de U-34, con las **dos recetas deterministas** de D-65 (3): la realista (3) y la adversaria de magnitud (3b)) | V-13 (regla del rojo de D-63, §1.5), V-17 (con los invariantes de D-64 (3)) y V-19 en verde; **los valores que congelarán los casos dorados son los redondeados** (D-63 (6)): V-19 se comprueba sobre la salida de `solve()`, que es la que vuelca `tools/make_examples.py`; **mediciones obligatorias, no estimaciones** (V-18, U-34, D-65 (3)-(4)): (i) respuesta de la receta realista **y** de la entrada adversaria con `include_frames: true` **≤ 3 500 000 B** cada una, la mayor de las dos serializaciones, y la adversaria con **≥ 20 B por número** de media (que sea de verdad del tipo de ≈ 25 B que pide D-65 (3)); (ii) petición del peor caso **≤ 65 536 B** (D-48); (iii) caso del Excel con y sin fotogramas. Las cifras en bytes, con las dos recetas, quedan en `doc/DECISIONS.md` (U-34) y sustituyen a las de la 1.0. **Si (i) no cumple, la fase se detiene y se abre un `DR`** (U-34 (6)): el tope lo fijó el portal (D-65). Tiempo del peor caso con fotogramas < 0.8 s (V-16, U-38) | HU-1.1 (4), 1.3 (1), 1.4 (2), 1.5 (2–3), 2.1 (1–2), 2.2 (1–3), 3.1 (1), 3.2 (2), 4.1, 4.2 (1–4); HU-1.6 (7) sin ρ ni g |
 | **6. Entrega** | `tools/make_examples.py`, `portal/examples/`, `portal/INTEGRATION.md`, etiqueta | Checklist `kit 04 §3` completo, con suite, ejemplos **y las mediciones de V-18** ejecutados **desde el paquete instalado en un venv limpio** (kit 2.0.0). `portal/INTEGRATION.md` lleva: **(a) tamaño** (D-57 (1)-(2), (10); D-65 (3)-(4)): las dos cifras medidas de la respuesta en bytes (receta realista y entrada adversaria, ambas ≤ 3,5 MB) y la de la petición (≤ 64 KiB), las **dos recetas deterministas** (para que la guarda de D-57 (2) en `backend/tests/` mida exactamente lo mismo), la **cota absoluta** de U-34 (3b) como techo para toda entrada admitida, con la frase de D-65 (4) —D-57 (1) se da por cumplido para toda entrada admitida solo con esa guarda en verde, no con la cuenta ni con las mediciones del upstream—, la salvedad de que las cifras medidas son de dos recetas concretas y no el máximo (F5R-01), el cierre de F5-01 del lado del upstream con las mediciones y la cota, y el aviso de que producción corta cuerpos > 4,5 MB sin que el CI ni `TestClient` lo detecten; **(b) precisión y comparación** (D-63 (5)): qué listas van a 3 decimales y qué no (`time_s`, `frame_time_s`, escalares, campos de `checks`), que una lista no se compara con igualdad estricta con un escalar (se redondea el escalar a 3 decimales o se usa tolerancia 0.0005 m), las diferencias de listas (0.001 m) y la localización de progresivas escalares (U-41); **(c) regla del rojo** (D-63 (3)-(4), §1.5): marcador y extremo en `critical` leídos del aviso, qué aviso gobierna cada umbral, tramo solo con aviso y el único desacuerdo admitido; **(d) invariantes de la serie** (D-64 (3), §1.4): `frame_x_m` == `x_m`, p/γ = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota que `pressure_head_*`, la correspondencia fotograma k ↔ paso i_k (con la salvedad del último fotograma con submuestreo) y la tolerancia garantizada; **(e) cambios 1.0 → 2.0** (campos retirados, 422 de ρ y g, `frame_pressure_head_m` retirado) y constantes ρ y g. `portal/examples/` regenerados con la 2.0; cada lista en m, m.c.a. y L/s de cada ejemplo de éxito es igual a su propio redondeo a 3 decimales (V-19 sobre los ejemplos, D-63 (6)) | HU-x.y «entregable» |
+| **7. Enmienda F5R-02: rango del PN y resultados no representables** (tras la entrega v0.1.0; se construye tras la G4 del 2026-11-16) | En este orden: **(7.1) rango de `pn_bar`** (U-43): validador propio [1, 100] con los dos mensajes de §1.3, `repr` cuando el eco coincide con el límite, `description` nueva. **(7.2) guarda de U-44** en `_solve`: `ArithmeticError` del cálculo y búsqueda de ±inf sobre los valores de precisión completa antes de U-39 → `MainpipeTransientValidationError` con el mensaje de §1.6; el `NaN` sin desbordamiento sigue en `MainpipeTransientComputationError`. **(7.3) pruebas** de V-12 (rango) y V-20. **(7.4) tiempo**: la búsqueda de ±inf recorre ≈ 126 000 valores; se repite V-16 | V-12 y **V-20** en verde; HU-1.6 crits. 7 y 14 (a–d) con su test y el mensaje literal; con un PN admitido, la salida de `solve()` de los 12 ejemplos de `portal/examples/` es **idéntica** a su `expected` (sin regenerar: prueba de que la enmienda no cambia ningún número); la suite completa en verde; mediana de 5 ejecuciones del peor caso con fotogramas < 0.8 s (V-16, anotada en U-38). `SCHEMA_VERSION` sigue en `"2.0"` (U-45) | HU-1.6 (7, 14); HU-3.1 (1–3) |
+| **8. Entrega 0.2.0** | `__version__` 0.2.0 (`pyproject.toml`) y entrada 0.2.0 en `CHANGELOG.md` (U-45 (2)); `portal/examples/` regenerados con `tools/make_examples.py` desde el paquete instalado, con **tres ejemplos nuevos** de `MainpipeTransientValidationError`: `error-pn-sobre-maximo` (caso del Excel con `pn_bar` = 100.5), `error-pn-bajo-minimo` (ídem con `pn_bar` = 0.5) y `error-resultado-no-representable` (U-44 (5); una entrada determinista que desborde y que la fase 7 haya probado, p. ej. el caso del Excel con `pn_bar` = 1 y `reservoir_level_m` = 10³⁰⁸, donde la razón al PN desborda, `[razonado]` en U-44); `portal/INTEGRATION.md` al día; commit en `main` con etiqueta `v0.2.0` | Checklist `kit 04 §3` completo desde el paquete instalado en un venv limpio (kit 2.0.0 y siguientes). Los `expected` de los 12 ejemplos existentes **no cambian** (solo `package_version` y `commit` en sus metadatos). `portal/INTEGRATION.md` lleva: la fila `pn_bar` con 1 ≤ PN ≤ 100 (hoy dice «> 0»), los dos mensajes de U-43, el 422 de U-44 en el mapeo de errores (con su mensaje, y que llega por `http_status` y no por la validación de FastAPI), y una sección **«Cambios 0.1.0 → 0.2.0»**: `SCHEMA_VERSION` sin cambio (`"2.0"`), PN fuera de [1, 100] → 422, entradas extremas 500 → 422, tres ejemplos nuevos, `validation` de `pn_bar` en `ui-spec.json` a [1, 100]. V-18 corre con la suite desde lo instalado sin cifras nuevas esperadas (la forma y los números de la respuesta no cambian y las dos recetas usan PN = 16 bar, dentro del rango), así que la guarda de D-57 (2) del portal sigue midiendo las mismas entradas; si una cifra cambiara, se detiene y se informa (U-34 (6)) | HU-x.y «entregable» |
 
 Ejemplos previstos para `portal/examples/` (`kit 04 §2`; los genera `hie-api` ejecutando el
 paquete): `solve-excel-horizontal` (camino feliz, `status: error` con `COLUMN_SEPARATION_RISK` y
@@ -755,6 +822,11 @@ de un empate de redondeo podría salir 1 mm distinto en otra versión de `numpy`
 tolerancia. La probabilidad es del orden de 10⁻⁶ por caso dorado; si ocurre, el diagnóstico es
 inmediato (un valor que difiere exactamente 0.001) y se trata como hallazgo de integración
 (`kit 04 §4`). Las versiones de `numpy` con que se generan los ejemplos se anotan en ellos.
+
+La entrega v0.1.0 añadió `solve-pn-superado` a esta lista (12 ejemplos). La **0.2.0** (fase 8,
+enmienda F5R-02) añade tres errores `MainpipeTransientValidationError`, todos con
+`include_frames: false`: `error-pn-sobre-maximo`, `error-pn-bajo-minimo` y
+`error-resultado-no-representable` (15 ejemplos). Los `expected` de los 12 anteriores no cambian.
 
 ## 6. Estrategia de verificación hidráulica (`kit 01 §9`)
 
@@ -784,7 +856,7 @@ F1-02) pasan a los arrays internos o a la tolerancia efectiva.
 | V-09 | Invariancia de datum | Caso Excel con z = 50, H_dep = 150 | M13 | H = original + 50; presiones iguales, ± 10⁻⁶ m en escalares y `MocResult`; listas de `solve()` ± 0.001 m (HU-1.1 crit. 4, 2.0) |
 | V-10 | Perfil (M13–M14) | HU-2.1 y HU-2.2 (perfil plano de 2 puntos, loma 40 m, vértice en 520 m, L = 1250 m) | identidades | ± 10⁻⁶ m sobre `MocResult`; loma: p_min(500) = p_min horizontal − 40 ± 10⁻⁶ m. **2.0**, a través de `solve()`: HU-2.1 crit. 2 y HU-2.2 crit. 3 con 0.001 m + 10⁻⁹ m; HU-2.2 crit. 1–2 con el escalar redondeado; HU-2.1 crit. 1 y 3, igualdad exacta (V-19) |
 | V-11 | Joukowsky / Michaud / pulso | HU-3.4 crit. 1–2 | [Jk], [Mi]; `4_Validacion` (C11, C22, C27) | Caso Excel contra el JSON de referencia: ΔH_J = 144.2111 m, ΔH_MOC = 149.56440 m, `theory_deviation_pct` = 100·C27 = 3.712 %, todos a rel. 10⁻⁹ (U-29); `maneuver_type` = `rapid`, L_pulso = 250 m ± 10⁻⁹. Caso lento (sin hoja de referencia): ΔH_M contra la fórmula M16 a rel. 10⁻¹², y 28.84 ± 0.01 (HU-3.4 crit. 2) |
-| V-12 | PN | HU-3.1 crit. 1–3 | M18 | `pn_head_m` ± 0.01; ratio ± 0.1 %. **2.0**: `pn_head_m` = PN·10⁵/(1000·9.81) a rel. 10⁻¹²; sin casos con otra ρ u otra g (U-40) |
+| V-12 | PN | HU-3.1 crit. 1–3; **HU-1.6 crit. 7 y 14 a–c** (enmienda F5R-02) | M18; U-43 | `pn_head_m` ± 0.01; ratio ± 0.1 %. **2.0**: `pn_head_m` = PN·10⁵/(1000·9.81) a rel. 10⁻¹²; sin casos con otra ρ u otra g (U-40). **Rango (U-43)**, exacto: `pn_bar` = 1 y 100 calculan (caso del Excel; con 100, `pn_head_m` = 1019.37 ± 0.01 y a rel. 10⁻¹² contra M18); 100.5, 10³⁰⁴, 0.5, 5·10⁻³²⁴, 10⁻³²⁰, 10⁻³⁰⁰, 0 y −1 dan `MainpipeTransientValidationError` con el mensaje literal de §1.3 (por encima o por debajo); 100.00000000001 y 0.99999999999 escriben {v} con `repr` y nunca «100 bar supera el máximo de 100 bar» ni «1 bar es menor que el mínimo de 1 bar»; el mismo texto sale de `SolveRequest.model_validate` (lo que ve FastAPI, `kit 02 §3`) |
 | V-13 | Umbrales de checks y regla del rojo | HU-3.2 crit. 3–7, HU-3.3, HU-3.5; además la regla del rojo de §1.5 (D-60 (1) enmendada por D-63 (3)-(4)) en el caso Excel, la loma de V-10, un caso sin avisos, la receta de U-34 y **cuatro casos construidos en la banda** (PN y límite × los dos lados), con el umbral (`pn_bar` o `min_allowed_pressure_head_m`, este último en [−10.33, 0]) elegido entre el extremo global de precisión completa y su redondeo a 3 decimales | tabla §1.5 | presencia / ausencia exacta del código; `first_time_s` ± Δt; `min_allowed_pressure_head_m` de la respuesta = el enviado o −10.0. **Regla del rojo (U-36)**: (a) **aviso ⇔ cruce a precisión completa**, exacto: `PN_EXCEEDED` presente ⇔ `pressure_head_max_global_m` > `pn_head_m` ⇔ ∃j con la envolvente máxima de `MocResult` > `pn_head_m`; ídem `COLUMN_SEPARATION_RISK` con el mínimo y `min_allowed_pressure_head_m`. (b) **Campos del aviso a precisión completa**, iguales con `==`: `value_m`, `x_m` y `time_s` del aviso = `pressure_head_max_global_m`, `_x_m`, `_time_s` (o los del mínimo) = el extremo de `MocResult`; `limit_m` = el umbral; en al menos un caso `value_m` ≠ round(`value_m`, 3), para probar que no se redondea; round(`x_m`, 3) está en la lista `x_m` y `time_s` está en `time_s`. (c) `STEADY_NEGATIVE_PRESSURE` con `error` ⇒ `COLUMN_SEPARATION_RISK` presente. (d) **Toda discrepancia cae en la banda**, sobre las listas de `solve()`: si ∃j `pressure_head_max_m[j]` > `pn_head_m` y no hay `PN_EXCEEDED`, entonces 0 ≤ `pn_head_m` − `pressure_head_max_global_m` < 0.0005 m + 10⁻⁹ m; si hay `PN_EXCEEDED` y ninguna j cumple, 0 < `pressure_head_max_global_m` − `pn_head_m` ≤ 0.0005 m + 10⁻⁹ m; ídem con el mínimo y el límite (signos invertidos). Fuera de la banda, «∃j redondeada cumple ⇔ aviso» exacto. Los casos construidos muestran los dos lados (aviso sin tramo; j redondeada sin aviso) y que el aviso es el de precisión completa. Que la pantalla no dibuje el tramo sin aviso no lo puede probar el paquete: es del portal |
 | V-14 | Amortiguamiento con fricción | Caso Excel | propiedad física [WS] §3 | máx. \|H_v − H_dep\| de cada periodo 4L/a ≤ el del periodo anterior (después de Tc) |
 | V-15 | Régimen como punto fijo | Ley (0; Q₀), (5 s; Q₀), (6 s; 0) | M3 | H y Q sin cambio para t < 5 s, ± 10⁻⁹ |
@@ -792,6 +864,7 @@ F1-02) pasan a los arrays internos o a la tolerancia efectiva.
 | V-17 | Fotogramas | HU-4.1 crit. 1–4, HU-4.2 crit. 2 (enmendadas por D-57 y por la enmienda del 2026-11-15) | coherencia interna | Caso Excel, 401 fotogramas sin submuestreo: `frame_head_m` en x = L y L/2 frente a `head_valve_m` y `head_midpoint_m`, y en x = 0 frente a `reservoir_level_m` redondeado a 3 decimales, ± 10⁻⁹ m (en la práctica, iguales: V-19); presión derivada `frame_head_m` − `elevation_m` en x = L y L/2 frente a `pressure_head_valve_m` y `pressure_head_midpoint_m`, 0.001 m + 10⁻⁹ m (crit. 1). Sin submuestreo, máx./mín. en el tiempo de `frame_head_m` − `elevation_m` = `pressure_head_max_m` / `pressure_head_min_m`, 0.001 m + 10⁻⁹ m (crit. 2). Las claves `frame_pressure_head_m` y `frame_flow_lps` **no existen** en la respuesta, con `include_frames` verdadero o falso, y `frame_x_m` = `x_m` elemento a elemento (crit. 3). Frente de onda a t = 0.55 s como V-06, sobre `frame_head_m` (crit. 4). Con submuestreo: n_fotogramas ≤ min(1001, ⌊50 000 / n_progresivas⌋) − 1 (U-10, D-65 (1); receta de U-34: 70), primer y último fotograma exactos, cada `frame_time_s` está en `time_s`, envolventes sobre todos los pasos. **Invariantes de D-64 (3)** (§1.4, U-42), en el caso Excel, un perfil genérico y la receta de U-34 (submuestreada): `frame_x_m` == `x_m` (listas idénticas); para todo k y j, \|(`frame_head_m[k][j]` − `elevation_m[j]`) − r(H − z)(x_j, t_{i_k})\| ≤ 0.001 m + 10⁻⁹ m con H y z de precisión completa (`MocResult`); `time_s[i_k]` == `frame_time_s[k]`, con i_k = k·`frame_stride` salvo el último fotograma (i = `n_steps`); en x = L y L/2, presión derivada frente a `pressure_head_valve_m[i_k]` y `pressure_head_midpoint_m[i_k]` ≤ 0.001 m + 10⁻⁹ m para **todo** k, incluido el último del caso submuestreado; misma cota en todos los campos de presión: \|`head_initial_m` − `elevation_m` − `pressure_head_initial_m`\|, \|`head_max_m` − `elevation_m` − `pressure_head_max_m`\| y \|`head_min_m` − `elevation_m` − `pressure_head_min_m`\| ≤ 0.001 m + 10⁻⁹ m en toda j |
 | V-18 | Tamaño de petición y respuesta | Peor caso de U-34 (receta determinista y barrido), entrada adversaria de magnitud (U-34 (3b), receta determinista) y caso Excel | D-57 (1), (10); D-65 (3)-(4); D-48 | Medido en bytes, sin tolerancia: respuesta de la receta **y** de la entrada adversaria con `include_frames: true` ≤ 3 500 000 B cada una, en la mayor de las dos serializaciones de U-34; la adversaria con ≥ 20 B por número de media; petición del peor caso ≤ 65 536 B. Además, la cota analítica de U-34 (3b) (números × 25 B + estructura) ≤ 3 500 000 B con el tope vigente: es el techo para toda entrada admitida y se publica, pero D-57 (1) solo se da por cumplido con la guarda de D-57 (2) del portal en verde, no con la cota ni con estas mediciones (D-65 (4)); las dos recetas son mediciones concretas, no el máximo (F5R-01). Desde el paquete instalado en la fase 6 |
 | V-19 | Precisión de la serialización (U-39) | HU-4.2 crit. 3–4; HU-1.3 crit. 1; HU-2.1 crit. 1 y 3; HU-4.1 crit. 1 en x = L y L/2; caso del Excel, receta de U-34 y caso de HU-4.2 crit. 4 (L = 100 m, a = 1500 m/s, N = 200, Δt = 1/3000 s, duración por defecto → 8 500 pasos) | U-39 | Exacto, sin tolerancia: cada valor de las listas de §1.4 en m, m.c.a. y L/s es igual a su propio redondeo a 3 decimales; `time_s`, `frame_time_s` y los escalares son los de precisión completa (iguales a los de `MocResult` o a la fórmula); `head_valve_m[0]` = `head_initial_m[-1]`; perfil frente a horizontal con L = 1000 m, series de H y Q y envolventes de H en los nodos idénticas; perfil de dos puntos idéntico a horizontal; `frame_head_m` en x = L y L/2 idéntica a las series. En el caso de Δt = 1/3000 s, paso de `time_s` = Δt ± 10⁻⁹ s, `time_s` y `frame_time_s` estrictamente crecientes y cada `frame_time_s` en `time_s`. Ninguna lista lleva `-0.0` |
+| V-20 | Ningún 500 causado por la entrada (U-44; enmienda F5R-02) | HU-1.6 crit. 14 d; las entradas de F5R-02 y los 500 `[razonado]` de U-44 | U-43, U-44; `kit 02 §1–2` | Exacto, sin tolerancia. (a) **PN admitido**: con `pn_bar` = 1 y = 100, cada uno con el caso del Excel, la receta realista (3) y la adversaria (3b) de U-34 y su variante de datum negativo (F5R-01), `solve()` no lanza y `pn_head_m` y `pressure_max_pn_ratio_pct` son finitos. (b) **No representable → 422**: el caso del Excel con `pn_bar` = 1 y `reservoir_level_m` = 10³⁰⁸ (la razón desborda), cotas de signo opuesto del orden de 10³⁰⁸ (H − z = ±inf), V₀ > 1.3·10¹⁵⁴ m/s con f > 0 (`OverflowError` en V₀²) y un caudal inicial que subdesborda a 0 (`ZeroDivisionError`) dan `MainpipeTransientValidationError` con `http_status` 422 y el mensaje literal de §1.6, con `__cause__` cuando hay excepción de origen; las que no reproduzcan el 500 en v0.1.0 se sustituyen por otra del mismo tipo y se anota. (c) **La guarda no salta** con ningún ejemplo de `portal/examples/` ni con las recetas de (a). (d) **`NaN` sin desbordamiento sigue en 500**: un `NaN` inyectado en un valor de la respuesta (sin ±inf) da `MainpipeTransientComputationError`, no el 422 |
 
 ## 7. Decisiones que se solicitan al portal
 
@@ -801,6 +874,12 @@ alternativa (a) en los cuatro). DR-7, DR-8 y DR-9 eran bloqueantes para la nueva
 pedido queda abierto**. Las condiciones que añadieron D-63 … D-65 están incorporadas en §1.4,
 §1.5, §2, §5 y §6; lo que queda para la pantalla y la construcción está en la sección «Pendiente
 tras D-63 … D-66» de `portal/DECISION-REQUESTS.md`.
+
+**Enmienda F5R-02 (2026-11-15 / 2026-11-16): ningún pedido nuevo** (U-45 (4)). El rango de una
+entrada, los mensajes de error y la clase de excepción con entradas extremas son del upstream (regla
+central del kit); no se toca D-57 … D-66 (las dos recetas de D-65 (3) usan PN = 16 bar y dan lo
+mismo), ni endpoints, dependencias, layout o colores. Comprobado en la G4 del 2026-11-16:
+DR-1 … DR-10 `resuelto` con su `D-NN` y ninguno `abierto`.
 
 | DR | Pregunta | Bloquea | Estado | Efecto en este plan |
 |---|---|---|---|---|
@@ -834,6 +913,10 @@ tras D-63 … D-66» de `portal/DECISION-REQUESTS.md`.
 | 10d | Presupuesto de celdas con una sola matriz | **DR-9 → D-65**: la fórmula de hoy (U-10), con dos recetas medidas (U-34) |
 | 10e | ρ y g fijos | Sin pedido (regla central del kit). U-40: 422 con mensaje propio si la petición los trae; sin eco en la respuesta; cambio de forma ya cubierto por la 2.0 |
 | 10f | Medición de tamaños | U-34 enmendada: se repite en la fase 5 con la 2.0, más la entrada adversaria (3b), las dos como recetas deterministas que también mide la guarda del portal (D-65 (3)); las cifras de la 1.0 quedan como registro |
+| 11a | Cota inferior de `pn_bar` (F5R-02) | U-43: 1 bar, inclusiva; con ella el PN nunca da `pn_head_m` ni razón infinitos, y lo que la cota sola no cubre (otras entradas absurdas) lo cubre U-44 (§1.3, §1.4, §1.6) |
+| 11b | Textos de los dos 422 | U-43 (§1.3), con `repr` cuando el eco coincide con el límite |
+| 11c | Versionado y entrega | U-45: `SCHEMA_VERSION` `"2.0"` sin cambio, `__version__` 0.2.0, entrega nueva `v0.2.0` (fases 7 y 8, §1.1); sin pedido |
+| 11d | Artefactos de `portal/` con el rango | `ui-spec.json`: `validation` [1, 100] y ayuda (hecho, G3 del 2026-11-16). `INTEGRATION.md`: fila `pn_bar`, mensajes, 422 de U-44 y cambios 0.1.0 → 0.2.0 (fase 8, `hie-api`). `API-PROPOSAL.md`: mapeo de errores al día (2026-11-16) |
 
 ## 8. Hallazgos para el kit
 
@@ -880,6 +963,13 @@ tras D-63 … D-66» de `portal/DECISION-REQUESTS.md`.
   dado, sus `x_m` y `value_m`) y el tramo se dibuja solo si ese aviso existe. `contract_path` apunta
   a un campo, no a «el elemento de `checks` con `code` = X», ni admite una condición de
   visibilidad. La etapa 3 tendrá que describirlo en `interactions`.
+- **`kit 01 §8` frente a `kit 01 §3`** (enmienda F5R-02, U-45). §8 dice que tras G4 «cambiar la
+  Capa 1 exige enmienda del plan y subir `SCHEMA_VERSION`»; §3 dice que `SCHEMA_VERSION` «sube
+  cuando cambia la forma del contrato, no cuando cambia un número» y define la forma como «campos,
+  tipos, unidades». Estrechar el rango admitido de una entrada o cambiar la clase de excepción con
+  entradas extremas cambia la Capa 1 sin cambiar la forma. El plan aplica §8 leído con la definición
+  de §3 (enmienda del plan sí, `SCHEMA_VERSION` no, `__version__` sí). Convendría que §8 diga «si
+  cambia la forma (§3)» y qué versión sube cuando cambian rangos o errores.
 
 Para el portal (no es del kit; va a `portal/INTEGRATION.md` en la fase 6):
 
@@ -909,3 +999,6 @@ Para el portal (no es del kit; va a `portal/INTEGRATION.md` en la fase 6):
 | 2026-11-15 | **Adopción del kit 3.0.1 (F6-04, `doc/verification/09-fase-6.md`), `hie-architect`, tras la entrega (pin `a04431e`, `v0.1.0`).** Corrección de registro: sin cambio de la Capa 1 ni de su forma (`SCHEMA_VERSION` sigue en `"2.0"`, `kit 01 §8`), del código, de los ejemplos ni del pin; sin DR. Revisado el changelog del kit entre 3.0.0 y 3.0.1: *patch* (DT-33) que solo reescribe `kit 03 §3` (IA: D-53/D-55, `AppEntry.aiDomain`, catálogo `domain` = `"channel"`) y `kit 03 §1` (código en los errores de `/api/ai/analyze`; D-26 ya ejecutada en la ruta), sin cambiar ninguna regla para el upstream. Efecto en el plan: ninguno. Las dos citas a `kit 03 §1` (§1.1, `/health` e import sin efectos; §8, redondeo en el paquete y no en el router) siguen diciendo lo mismo, y la app no tiene IA (D-62, §7 DR-6). Cabecera: `kit` 3.0.0 → 3.0.1; `portal/HANDOFF.md`, fila «Kit con el que se diseñó», ídem, con nota fechada. |
 | 2026-11-15 | **U-34 frente a D-65 (4) (F6R-01, `doc/verification/09-fase-6.md`), `hie-architect`.** Corrección de registro, sin cambio de forma ni de números del contrato (`SCHEMA_VERSION` `"2.0"`), sin DR. `doc/DECISIONS.md` U-34 hacía depender el techo de D-57 (1) para toda entrada admitida y el cierre de F5-01 de «las dos mediciones en verde»; D-65 (4) lo hace depender de la **guarda de D-57 (2) del portal** en verde, y la variante con datum negativo (2 844 325 B) muestra que las dos recetas no acotan toda entrada. Se alinea con la «Lectura» del tamaño de `portal/INTEGRATION.md`, que ya era correcta. El plan arrastraba la misma formulación y se corrige en: Parte 1, fila de la fase 5 («la respuesta más grande posible pesada en báscula») y riesgo 3 («el techo solo se da por cumplido si los dos pasan la báscula»); §2, «Cota absoluta» (ahora con la cota medida de 3 285 874 B como techo, las mediciones como recetas concretas y la frase de D-65 (4)); §5, fase 6 (a) (cierre de F5-01 del lado del upstream con las mediciones y la cota, salvedad de F5R-01); §6, V-18; §7, fila DR-9. Los criterios de «hecho» de las fases 5 y 6 no cambian en lo que miden (las mismas mediciones y los mismos topes), solo en cómo se leen. |
 | 2026-11-15 | **Erratas señaladas por el dueño, comprobadas: ya estaban corregidas**, sin cambio. La fila de la fase 3 en §5 dice «interpolación de z y de H en los vértices (Q no: M14, U-07)», coherente con M14 y U-07; la corrección se hizo en la enmienda del 2026-11-15 (entrada de ese día, «Pendientes corregidos»). La cabecera cita «U-01 … U-42» y la última fila de `doc/DECISIONS.md` es U-42 (la adopción del kit 3.0.1 y F6R-01 no añaden filas). |
+| 2026-11-15 | **Enmienda F5R-02 (`hie-architect`, kit 3.0.1), registrada a posteriori el 2026-11-16.** Estado: de congelado a **borrador** para los puntos de la enmienda. **Motivo**: hallazgo F5R-02 (`doc/verification/07-fase-5.md`): un `pn_bar` extremo (10³⁰⁴ o 5·10⁻³²⁴ bar) daba 500; el dueño fija el tope de 100 bar y encarga al plan la cota inferior (HU-1.6 crit. 14, épica pregunta 11; G1 reaprobada el 2026-11-15). Escrito entonces: cabecera; Parte 1 (fases 7 y 8 en «En qué orden» y sección «Enmienda F5R-02» con tres puntos para G2); `doc/DECISIONS.md` U-43 (rango [1, 100] y sus mensajes), U-44 (resultado no representable → 422), U-45 (`SCHEMA_VERSION` `"2.0"`, `__version__` 0.2.0, sin pedido) como **propuestas**, y nota en U-37. **No se escribió entonces** la Parte 2 que la cabecera citaba (§1.3 seguía en «> 0»; faltaban fases 7 y 8, V-20 y esta entrada): se completa en la entrada siguiente. |
+| 2026-11-16 | **G2 reaprobada** con la enmienda F5R-02 (`portal/HANDOFF.md`): el dueño aceptó los tres puntos de la Parte 1 (cota inferior de 1 bar inclusiva, lectura de HU-1.6 crit. 14 d con su riesgo residual, versionado sin pedido). **G3 reaprobada** el mismo día: `validation` de `pn_bar` en [1, 100] en `portal/ui-spec.json` y mensajes en `portal/prototype.html`. |
+| 2026-11-16 | **Congelado (G4 de la enmienda F5R-02), `hie-architect`, kit 3.0.1.** Comprobado antes de congelar (`kit 08 §1`): DR-1 … DR-10 `resuelto` con su `D-NN` (D-57 … D-66) y ningún `DR` `abierto`; la enmienda no abre ninguno (U-45 (4)); G1, G2 y G3 reaprobadas con la enmienda (2026-11-15, 2026-11-16, 2026-11-16). **U-43, U-44 y U-45 pasan a vigentes.** **Parte 2 completada** con lo que decían U-43 … U-45, sin decisiones nuevas: §1.1 (párrafo de versionado de la enmienda: `SCHEMA_VERSION` `"2.0"`, `__version__` 0.2.0, motivo según `kit 01 §3` y §8); §1.3 (fila `pn_bar` [1, 100] y regla con los dos mensajes); §1.4 (timbraje finito con PN admitido); §1.6 (guarda de U-44, mensaje, `NaN` sin desbordamiento sigue en 500); §5 (estado tras F5R-02, **fases 7 y 8**, ejemplos de la 0.2.0); §6 (**V-12** ampliada con el rango, **V-20 nueva**); §7 (sin pedidos; pregunta 11 de la épica); §8 (hallazgo `kit 01 §8` frente a §3). Detalle que añade la Parte 2 y no estaba escrito en U-43 … U-45: los nombres de los dos ejemplos nuevos de PN (`error-pn-sobre-maximo`, `error-pn-bajo-minimo`) y la lista de casos de V-12 y V-20. Parte 1: puntos de G2 en pasado y aviso de lo completado. **`SCHEMA_VERSION` = `"2.0"`** sin cambio (U-45). Estado a **congelado**. `portal/API-PROPOSAL.md`: mapeo de errores con el rango del PN y el 422 de U-44, cabecera con el kit 3.0.1 y cifras de tamaño medidas de la 2.0 (eran estimadas). |

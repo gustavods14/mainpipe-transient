@@ -7,7 +7,7 @@
 | Distribución | `mainpipe-transient` |
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.1` (adoptada el 2026-11-15 tras la entrega, F6-04; etapas 0–6 diseñadas con `3.0.0`) |
-| Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15) — antes `1.0` |
+| Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15; congelada de nuevo sin cambio de forma en la G4 de la enmienda F5R-02, 2026-11-16) — antes `1.0` |
 | Commit a pinear | `a04431e1dc741acfce305c6f7cfca3cdfa57e96c` (etiqueta `v0.1.0`, rama `main`) |
 
 ## Etapas
@@ -18,7 +18,7 @@
 | 1 | Historias (G1) | aprobada | 2026-11-15 | `doc/stories/` | 3.0.1 |
 | 2 | Plan (G2) | aprobada | 2026-11-16 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.1 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-16 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.1 |
-| 4 | Decisiones del portal (G4) | reabierta | 2026-11-15 | `D-NN` en el portal · plan `congelado` | 3.0.0 |
+| 4 | Decisiones del portal (G4) | aprobada | 2026-11-16 | `D-NN` en el portal · plan `congelado` | 3.0.1 |
 | 5 | Construcción (G5) | pendiente | — | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | — |
 | 6 | Entrega | pendiente | — | commit nuevo + etiqueta (v0.1.0 = `a04431e` sigue integrable) | — |
 
@@ -226,3 +226,14 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   validado con jsonschema contra `06-ui-spec.schema.json`. El uso aprobado no cambia; sin huecos
   del contrato ni DR. Siguiente: `hie-architect` vuelve a congelar el plan, pasa U-43 … U-45 a
   vigentes y la G4 se aprueba sin sesión del portal (ningún DR abierto).
+- 2026-11-16: **G4 aprobada de nuevo con la enmienda F5R-02** (kit 3.0.1, sin sesión del portal).
+  `hie-architect` comprobó que DR-1 … DR-10 están `resuelto` (D-57 … D-66) y que ninguno toca
+  F5R-02, volvió a congelar `doc/plans/01-golpe-ariete-v1.md` y pasó U-43 … U-45 a vigentes en
+  `doc/DECISIONS.md`. `SCHEMA_VERSION` sigue en `"2.0"` (U-45: cambia el rango admitido, no la
+  forma); `__version__` pasará a 0.2.0. Completó la Parte 2 del plan, que no recogía la enmienda
+  (§1.1, §1.3, §1.4, §1.6, fases 7 y 8, V-12, V-20, changelog), y puso al día
+  `portal/API-PROPOSAL.md` (rango del PN, 422 de U-44, kit 3.0.1). La columna «Kit» de la fila 4
+  pasa a 3.0.1, que es con lo que se aprobó esta G4. Hallazgo menor para `hie-prototyper`, que no
+  bloquea: `requests` de `portal/ui-spec.json` solo lista DR-1 … DR-5. Siguiente: `hie-api`,
+  fases 7 (validador de `pn_bar`, guarda de U-44, V-12 y V-20) y 8 (0.2.0, ejemplos,
+  `INTEGRATION.md`, etiqueta `v0.2.0`), cada una cerrada con `hie-verifier`.
