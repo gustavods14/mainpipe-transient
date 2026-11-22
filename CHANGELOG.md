@@ -38,8 +38,8 @@ el status de entradas que ya fallaban. Con un PN admitido, los resultados son bi
 ### Fase 8 — entrega 0.2.0
 
 - `__version__` 0.2.0.
-- `portal/examples/`: 15 casos. Los `expected` de los 12 de 0.1.0 no cambian (solo
-  `package_version` y `commit`); tres nuevos `MainpipeTransientValidationError` 422 con
+- `portal/examples/`: 15 casos. Los `expected` de los 12 de 0.1.0 no cambian (solo los
+  metadatos: `package_version`, `commit`, `generated_at` y `generated_with`); tres nuevos `MainpipeTransientValidationError` 422 con
   `include_frames: false`: `error-pn-sobre-maximo` (caso del Excel con `pn_bar` = 100.5),
   `error-pn-bajo-minimo` (ídem con 0.5) y `error-resultado-no-representable` (ídem con
   `pn_bar` = 1 y `reservoir_level_m` = 10³⁰⁸: la razón al PN desborda).

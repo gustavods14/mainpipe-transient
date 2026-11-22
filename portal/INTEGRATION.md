@@ -441,7 +441,7 @@ a bit los de 0.1.0.
 |---|---|---|
 | Rango de `pn_bar` | > 0 | **1 ≤ PN ≤ 100 bar**, ambos incluidos; fuera, 422 con los dos mensajes de arriba |
 | Entradas de magnitud extrema (resultado ±inf o desbordamiento) | 500 «el cálculo falló en el servidor» | **422** con el mensaje de resultado no representable, por `http_status` |
-| `portal/examples/` | 12 casos | 15: los `expected` de los 12 anteriores **no cambian** (solo `package_version` y `commit`); nuevos `error-pn-sobre-maximo`, `error-pn-bajo-minimo` y `error-resultado-no-representable` |
+| `portal/examples/` | 12 casos | 15: los `expected` de los 12 anteriores **no cambian** (solo los metadatos: `package_version`, `commit`, `generated_at` y `generated_with`); nuevos `error-pn-sobre-maximo`, `error-pn-bajo-minimo` y `error-resultado-no-representable` |
 | `portal/ui-spec.json` | `validation` de `pn_bar` con `min: 0` | `min: 1, max: 100` (incluidos), `hint` «1 ≤ PN ≤ 100 bar.» |
 
 Lo que el portal tiene que hacer al cambiar el pin: añadir los tres casos dorados nuevos,
