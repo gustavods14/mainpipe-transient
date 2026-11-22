@@ -170,6 +170,26 @@ CASES: list[tuple[str, str, dict[str, Any]]] = [
         "dato de entrada (ρ = 1000 kg/m³ fija). Mensaje propio en español.",
         excel(density_kgm3=1000.0),
     ),
+    # 0.2.0, amendment F5R-02 (plan 01 phase 8).
+    (
+        "error-pn-sobre-maximo",
+        "422 (U-43, 0.2.0): pn_bar = 100.5 bar, por encima del máximo de 100 bar; caso del "
+        "Excel.",
+        excel(pn_bar=100.5),
+    ),
+    (
+        "error-pn-bajo-minimo",
+        "422 (U-43, 0.2.0): pn_bar = 0.5 bar, por debajo del mínimo de 1 bar; caso del Excel.",
+        excel(pn_bar=0.5),
+    ),
+    (
+        "error-resultado-no-representable",
+        "422 (U-44, 0.2.0): resultado fuera del rango de float64 por una entrada de magnitud "
+        "absurda. Caso del Excel con pn_bar = 1 y reservoir_level_m = 1e308: la razón de la "
+        "presión máxima al PN desborda a infinito. No es validación del modelo: llega por el "
+        "http_status de la excepción, sin el prefijo «Value error, ».",
+        excel(pn_bar=1.0, reservoir_level_m=1e308),
+    ),
 ]
 
 

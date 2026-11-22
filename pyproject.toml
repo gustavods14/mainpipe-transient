@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mainpipe-transient"
-version = "0.1.0"
+version = "0.2.0"
 description = "Water hammer in a gravity main (reservoir - pipe - valve) by the Method of Characteristics."
 requires-python = ">=3.12"
 authors = [

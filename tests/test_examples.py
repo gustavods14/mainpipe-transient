@@ -152,3 +152,30 @@ def test_kit_coverage():
     excel = SUCCESS["solve-excel-horizontal"]["expected"]
     assert len(excel["frame_time_s"]) == 401 and len(excel["frame_x_m"]) == 21
     assert excel["frame_stride"] == 1
+
+
+# Phase 8 (0.2.0, amendment F5R-02): the three new 422 examples (U-43, U-44 (5)).
+V020_NEW_ERRORS = {
+    "error-pn-sobre-maximo": "pn_bar = 100.5 bar está fuera de rango: supera el máximo de 100 "
+                             "bar. El timbraje (PN) debe estar entre 1 y 100 bar.",
+    "error-pn-bajo-minimo": "pn_bar = 0.5 bar está fuera de rango: es menor que el mínimo de 1 "
+                            "bar. El timbraje (PN) debe estar entre 1 y 100 bar.",
+    "error-resultado-no-representable": (
+        "El resultado del cálculo queda fuera del rango numérico representable: revisa las "
+        "magnitudes extremas del nivel del depósito (reservoir_level_m), de las cotas "
+        "(pipe_elevation_m o profile_z_m), de la longitud, del diámetro y del caudal inicial. "
+        "Con valores de proyecto no se llega a este límite."
+    ),
+}
+
+
+def test_v020_fifteen_examples_with_the_three_new_errors():
+    assert len(EXAMPLES) == 15
+    for cid, message in V020_NEW_ERRORS.items():
+        ex = ERRORS[cid]
+        assert ex["expected"] == {"exception": "MainpipeTransientValidationError",
+                                  "http_status": 422}
+        assert ex["message"] == message
+        assert ex["inputs"]["include_frames"] is False
+    assert ERRORS["error-resultado-no-representable"]["inputs"]["pn_bar"] == 1.0
+    assert ERRORS["error-resultado-no-representable"]["inputs"]["reservoir_level_m"] == 1e308

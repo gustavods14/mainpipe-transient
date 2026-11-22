@@ -3,7 +3,51 @@
 Una entrada por cambio de contrato (`kit 01 §8`). `SCHEMA_VERSION` es la versión de la forma del
 contrato; `__version__`, la del código.
 
-## [0.1.0] — sin publicar
+## [0.2.0] — 2026-11-22
+
+Enmienda F5R-02 (plan `doc/plans/01-golpe-ariete-v1.md`, congelado de nuevo en la G4 del
+2026-11-16; U-43 … U-45). **`SCHEMA_VERSION` sigue en `"2.0"`** (U-45 (1)): ningún campo de
+`SolveRequest`, `SolveResponse` ni `Check` se añade, retira, renombra ni cambia de tipo o unidad.
+Sube `__version__` (menor de 0.x, U-45 (2)) porque se rechazan entradas antes admitidas y cambia
+el status de entradas que ya fallaban. Con un PN admitido, los resultados son bit a bit los de
+0.1.0.
+
+### Fase 7 — rango del PN y resultados no representables
+
+- `pn_bar` admite de 1 a 100 bar, ambos incluidos (U-43). Fuera de rango, 422 con uno de dos
+  mensajes: «pn_bar = {v} bar está fuera de rango: supera el máximo de 100 bar. El timbraje (PN)
+  debe estar entre 1 y 100 bar.» o «… es menor que el mínimo de 1 bar. …» (incluidos 0 y los
+  negativos, HU-1.6 crit. 7). {v} con el eco de U-26; si coincide con el límite, `repr(v)`.
+  `description` del campo: «Pipe pressure rating PN (bar). 1 <= PN <= 100.»
+- Un resultado que `float64` no puede representar es `MainpipeTransientValidationError` (422),
+  no 500 (U-44): `ArithmeticError` del cálculo (`OverflowError`, `ZeroDivisionError`,
+  `FloatingPointError`) o algún ±inf entre los valores de la respuesta a precisión completa
+  (listas, escalares y campos de `checks`), buscado antes del redondeo de U-39 y antes de los
+  extremos globales. Mensaje único: «El resultado del cálculo queda fuera del rango numérico
+  representable: …». Un `NaN` sin desbordamiento sigue siendo
+  `MainpipeTransientComputationError` (500).
+- El cálculo corre con los avisos de numpy silenciados (`np.errstate`): el 422 no depende de los
+  filtros de avisos del llamador. `B = a/(g·A)` que subdesborda a 0 lanza `FloatingPointError`
+  (→ 422) en vez de dar `NaN` (F7R-01).
+- `tests/test_amendment_f5r02.py`: V-12 (rango y mensajes, también por el modelo que valida
+  FastAPI) y V-20 (PN admitido nunca da 500; cuatro entradas que desbordan → 422; la guarda cubre
+  cada lista y escalar y corre antes del redondeo; `NaN` sin desbordamiento → 500); los 12
+  ejemplos de 0.1.0 se reproducen bit a bit sin regenerar. Peor caso con fotogramas, mediana
+  0.240 s (V-16, U-38).
+
+### Fase 8 — entrega 0.2.0
+
+- `__version__` 0.2.0.
+- `portal/examples/`: 15 casos. Los `expected` de los 12 de 0.1.0 no cambian (solo
+  `package_version` y `commit`); tres nuevos `MainpipeTransientValidationError` 422 con
+  `include_frames: false`: `error-pn-sobre-maximo` (caso del Excel con `pn_bar` = 100.5),
+  `error-pn-bajo-minimo` (ídem con 0.5) y `error-resultado-no-representable` (ídem con
+  `pn_bar` = 1 y `reservoir_level_m` = 10³⁰⁸: la razón al PN desborda).
+- `portal/INTEGRATION.md`: fila `pn_bar` con 1 ≤ PN ≤ 100 y sus dos mensajes, el 422 de U-44 en
+  el mapeo de errores y la sección «Cambios 0.1.0 → 0.2.0».
+- Sin cambios en `src/`.
+
+## [0.1.0] — 2026-11-15
 
 Contrato objetivo: `SCHEMA_VERSION = "2.0"` (plan `doc/plans/01-golpe-ariete-v1.md`, congelado de nuevo
 en G4 el 2026-11-15 tras la enmienda; antes `"1.0"`). Las fases 0–4 se construyeron sobre la 1.0 y
