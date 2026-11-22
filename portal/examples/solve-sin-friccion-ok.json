@@ -2,14 +2,14 @@
   "id": "solve-sin-friccion-ok",
   "description": "status ok, sin checks: sin fricción, cierre en 0.05 s, depósito a 150 m y PN 40. La presión mínima (≈ 5.8 m.c.a.) queda por encima de 0 y la máxima por debajo del 80 % del PN.",
   "function": "solve",
-  "package_version": "0.1.0",
+  "package_version": "0.2.0",
   "schema_version": "2.0",
-  "generated_at": "2026-11-15",
-  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_at": "2026-11-22",
+  "commit": "61e184824dda4803fff7ce4afcb413a9dfe85800",
   "generated_with": {
     "python": "3.12.10",
     "numpy": "2.5.5",
-    "pydantic": "2.14.3"
+    "pydantic": "2.14.4"
   },
   "inputs": {
     "geometry": "horizontal",

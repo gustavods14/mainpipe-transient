@@ -3,7 +3,7 @@
 > **Qué es este documento.** El contrato de **Capa 1** del paquete `mainpipe_transient`, tal como
 > está en el código del commit entregado (`src/mainpipe_transient/__init__.py`, `schemas.py`,
 > `exceptions.py`). No documenta endpoints del portal (Capa 2) ni tipos de TypeScript (Capa 3).
-> Lo redacta el upstream (`hie-api`, fase 6 del plan `doc/plans/01-golpe-ariete-v1.md`) leyendo
+> Lo redacta el upstream (`hie-api`, fases 6 y 8 del plan `doc/plans/01-golpe-ariete-v1.md`) leyendo
 > el código; el portal lo copia a `doc/apps/mainpipe-transient/INTEGRATION.md` y lo verifica
 > contra el paquete instalado.
 
@@ -13,8 +13,8 @@
 | Paquete Python | `mainpipe_transient` (distribución `mainpipe-transient`) |
 | Repositorio upstream | https://github.com/gustavods14/mainpipe-transient |
 | Commit pineado | el de `portal/HANDOFF.md`, fila «Commit a pinear» (se fija en la entrega) |
-| `__version__` | `0.1.0` |
-| `SCHEMA_VERSION` | `"2.0"` (contrato congelado en G4 el 2026-11-15, D-63 … D-66) |
+| `__version__` | `0.2.0` (antes `0.1.0`, pin `a04431e`; cambios abajo, «Cambios 0.1.0 → 0.2.0») |
+| `SCHEMA_VERSION` | `"2.0"` (contrato congelado en G4 el 2026-11-15, D-63 … D-66; sin cambio de forma en la 0.2.0, U-45) |
 
 ---
 
@@ -73,7 +73,7 @@ admitido (N = 200, 699 progresivas, 10 000 pasos, con fotogramas): mediana 0.25 
 | `darcy_friction_factor` | sí | `float` | — | 0 ≤ f ≤ 0.1 |
 | `initial_flow_lps` | sí | `float` | L/s | > 0 |
 | `reservoir_level_m` | sí | `float` | m | cualquiera (mismo datum que la tubería) |
-| `pn_bar` | sí | `float` | bar | > 0 |
+| `pn_bar` | sí | `float` | bar | 1 ≤ PN ≤ 100, ambos incluidos (U-43); mensajes abajo |
 | `min_allowed_pressure_head_m` | no (`-10.0`) | `float` | m.c.a. | −10.33 ≤ valor ≤ 0 |
 | `closure_time_s` | sí | `list[float]` | s | 2–20 puntos, empieza en 0, estrictamente creciente |
 | `closure_flow_lps` | sí | `list[float]` | L/s | misma longitud; `[0]` a ±0.1 % de Q₀ (se sustituye por Q₀); 0 ≤ Q ≤ Q₀; último = 0 |
@@ -87,6 +87,20 @@ Reglas cruzadas, todas 422 con mensaje en español: número de fricción del tra
 que reenviarla calcule, y la malla más gruesa que admite la duración pedida); magnitudes que
 desbordan en esas reglas. Campos retirados en la 2.0: `density_kgm3` y `gravity_ms2` (abajo,
 «Cambios 1.0 → 2.0»).
+
+Mensajes de `pn_bar` fuera de rango (U-43; validador del campo en `SolveRequest`):
+
+- por encima: «pn_bar = 100.5 bar está fuera de rango: supera el máximo de 100 bar. El timbraje
+  (PN) debe estar entre 1 y 100 bar.»
+- por debajo, incluidos 0 y negativos: «pn_bar = 0.5 bar está fuera de rango: es menor que el
+  mínimo de 1 bar. El timbraje (PN) debe estar entre 1 y 100 bar.»
+
+El valor se escribe con hasta 10 cifras significativas; si así coincidiera con el límite (p. ej.
+100.00000000001), se escribe con `repr`, para que el mensaje nunca diga «100 bar supera el
+máximo de 100 bar». Es validación del modelo: si el router valida el cuerpo con `SolveRequest`,
+FastAPI la rechaza antes de llamar a `solve`, con `loc` = `["pn_bar"]` y `msg` = «Value error, »
+seguido del mismo texto; llamando a `solve`, sale como `MainpipeTransientValidationError` sin el
+prefijo.
 
 ---
 
@@ -219,7 +233,8 @@ Orden: `error` antes que `warning`; dentro de cada severidad, el de la tabla. `s
 | Excepción | Status del portal | Cuándo ocurre |
 |---|---|---|
 | `MainpipeTransientValidationError` (hereda de `MainpipeTransientError` y `ValueError`) | 422 | Toda entrada inválida: tipos, rangos, reglas cruzadas, campo desconocido o retirado. Mensaje en español, ≤ 400 caracteres, con el punto que falla. `__cause__` = el `pydantic.ValidationError` |
-| `MainpipeTransientComputationError` | 500 | Fallo interno no previsto (no debería ocurrir con entradas válidas). Mensaje genérico en español; la traza va al `__cause__` y al log |
+| `MainpipeTransientValidationError`, resultado no representable (U-44, desde 0.2.0) | 422 | La entrada pasa la validación del modelo, pero tiene magnitudes tan absurdas que algún valor de la respuesta no cabe en `float64` (±inf) o el cálculo desborda (`OverflowError`, `ZeroDivisionError`, `FloatingPointError`). Mensaje único: «El resultado del cálculo queda fuera del rango numérico representable: revisa las magnitudes extremas del nivel del depósito (reservoir_level_m), de las cotas (pipe_elevation_m o profile_z_m), de la longitud, del diámetro y del caudal inicial. Con valores de proyecto no se llega a este límite.» **No es validación del modelo**: FastAPI no la ve; llega al portal por el `http_status` de la excepción, sin el prefijo «Value error, ». `__cause__` = la `ArithmeticError` cuando la hubo, ninguno si se detectó un ±inf. Ejemplo `error-resultado-no-representable` |
+| `MainpipeTransientComputationError` | 500 | Fallo interno no previsto (no debería ocurrir con entradas válidas), incluido un `NaN` sin desbordamiento (U-44 (3)). Mensaje genérico en español; la traza va al `__cause__` y al log |
 
 No existe `MainpipeTransientServiceError`: el paquete no llama a servicios externos. Ninguna
 otra excepción sale de `solve`. Cada clase lleva `http_status`, así que el router mapea con una
@@ -415,6 +430,26 @@ debe cambiar:
 Tipos, unidades y el resto de nombres no cambian. Ningún caso dorado de la 1.0 sigue valiendo:
 los de `portal/examples/` son de la 2.0 y congelan los valores redondeados (D-63 (6)).
 
+### (f) Cambios 0.1.0 → 0.2.0 (enmienda F5R-02: U-43, U-44, U-45)
+
+`SCHEMA_VERSION` **no cambia** (`"2.0"`): ningún campo de `SolveRequest`, `SolveResponse` ni
+`Check` se añade, retira, renombra ni cambia de tipo o unidad. Cambian qué valores de `pn_bar` se
+admiten y qué status sale con entradas que ya fallaban. Con un PN admitido, los resultados son bit
+a bit los de 0.1.0.
+
+| Cambio | 0.1.0 | 0.2.0 |
+|---|---|---|
+| Rango de `pn_bar` | > 0 | **1 ≤ PN ≤ 100 bar**, ambos incluidos; fuera, 422 con los dos mensajes de arriba |
+| Entradas de magnitud extrema (resultado ±inf o desbordamiento) | 500 «el cálculo falló en el servidor» | **422** con el mensaje de resultado no representable, por `http_status` |
+| `portal/examples/` | 12 casos | 15: los `expected` de los 12 anteriores **no cambian** (solo `package_version` y `commit`); nuevos `error-pn-sobre-maximo`, `error-pn-bajo-minimo` y `error-resultado-no-representable` |
+| `portal/ui-spec.json` | `validation` de `pn_bar` con `min: 0` | `min: 1, max: 100` (incluidos), `hint` «1 ≤ PN ≤ 100 bar.» |
+
+Lo que el portal tiene que hacer al cambiar el pin: añadir los tres casos dorados nuevos,
+regenerar el snapshot (los 12 existentes deben dar los mismos `expected`) y llevar la validación
+del formulario de `pn_bar` a [1, 100]. Las dos recetas de tamaño de (a) usan PN = 16 bar, dentro
+del rango: la guarda de D-57 (2) mide las mismas entradas y las cifras de (a) no cambian. Sin
+pedidos de decisión (U-45 (4)).
+
 ---
 
 ## Ejemplo mínimo
@@ -460,6 +495,9 @@ uno (`commit`, con las versiones de Python, numpy y pydantic en `generated_with`
 | `error-duracion-insuficiente` | `duration_s` < Tc + 2L/a | 422 |
 | `error-tope-de-pasos` | más de 10 000 pasos (N = 200, 50.001 s) | 422 |
 | `error-campo-retirado-densidad` | `density_kgm3` en la petición (migración 1.0 → 2.0) | 422 |
+| `error-pn-sobre-maximo` | `pn_bar` = 100.5 (nuevo en 0.2.0, U-43) | 422 |
+| `error-pn-bajo-minimo` | `pn_bar` = 0.5 (nuevo en 0.2.0, U-43) | 422 |
+| `error-resultado-no-representable` | `pn_bar` = 1 y `reservoir_level_m` = 10³⁰⁸: la razón al PN desborda (nuevo en 0.2.0, U-44) | 422 |
 
 Petición y respuesta del caso más pequeño, `solve-sin-friccion-ok` (respuesta abreviada; la
 completa en el ejemplo):
@@ -498,4 +536,5 @@ es inmediato (un valor que difiere exactamente 0.001) y se trata como hallazgo d
 
 | Fecha | Commit pineado | Qué cambió en el contrato | Acción tomada en el portal |
 |---|---|---|---|
-| — | (el de `portal/HANDOFF.md`) | Integración inicial, `SCHEMA_VERSION` `"2.0"` | — |
+| — | `a04431e` (v0.1.0) | Integración inicial, `SCHEMA_VERSION` `"2.0"` | — |
+| — | (el de `portal/HANDOFF.md`, v0.2.0) | `SCHEMA_VERSION` sin cambio; `pn_bar` en [1, 100]; resultado no representable 500 → 422; tres ejemplos nuevos (sección (f)) | — |

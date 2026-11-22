@@ -2,14 +2,14 @@
   "id": "solve-regimen-negativo",
   "description": "Régimen con presión negativa: perfil con un punto alto de 110 m en x = 300 m (vértice fuera de nodo) por encima de la línea piezométrica de régimen. STEADY_NEGATIVE_PRESSURE con severidad error (régimen bajo el límite), junto con COLUMN_SEPARATION_RISK y PN_NEAR_LIMIT; errores primero.",
   "function": "solve",
-  "package_version": "0.1.0",
+  "package_version": "0.2.0",
   "schema_version": "2.0",
-  "generated_at": "2026-11-15",
-  "commit": "a8a1675531428a121656f84e765390dd693e160e",
+  "generated_at": "2026-11-22",
+  "commit": "61e184824dda4803fff7ce4afcb413a9dfe85800",
   "generated_with": {
     "python": "3.12.10",
     "numpy": "2.5.5",
-    "pydantic": "2.14.3"
+    "pydantic": "2.14.4"
   },
   "inputs": {
     "geometry": "profile",

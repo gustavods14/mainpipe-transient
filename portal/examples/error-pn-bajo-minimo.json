@@ -1,0 +1,36 @@
+{
+  "id": "error-pn-bajo-minimo",
+  "description": "422 (U-43, 0.2.0): pn_bar = 0.5 bar, por debajo del mínimo de 1 bar; caso del Excel.",
+  "function": "solve",
+  "package_version": "0.2.0",
+  "schema_version": "2.0",
+  "generated_at": "2026-11-22",
+  "commit": "61e184824dda4803fff7ce4afcb413a9dfe85800",
+  "generated_with": {
+    "python": "3.12.10",
+    "numpy": "2.5.5",
+    "pydantic": "2.14.4"
+  },
+  "inputs": {
+    "geometry": "horizontal",
+    "length_m": 1000.0,
+    "pipe_elevation_m": 0.0,
+    "inner_diameter_mm": 300.0,
+    "wave_speed_ms": 1000.0,
+    "darcy_friction_factor": 0.02,
+    "initial_flow_lps": 100.0,
+    "reservoir_level_m": 100.0,
+    "pn_bar": 0.5,
+    "closure_time_s": [0.0, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 20.0],
+    "closure_flow_lps": [100.0, 50.0, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "n_reaches": 20,
+    "duration_s": 20.0,
+    "include_frames": false
+  },
+  "expects_error": true,
+  "expected": {
+    "exception": "MainpipeTransientValidationError",
+    "http_status": 422
+  },
+  "message": "pn_bar = 0.5 bar está fuera de rango: es menor que el mínimo de 1 bar. El timbraje (PN) debe estar entre 1 y 100 bar."
+}
