@@ -8,7 +8,7 @@
 | Repositorio | https://github.com/gustavods14/mainpipe-transient |
 | Kit con el que se diseñó | `3.0.1` (adoptada el 2026-11-15 tras la entrega, F6-04; etapas 0–6 diseñadas con `3.0.0`) |
 | Versión del contrato (`SCHEMA_VERSION`) | `2.0` (congelada en la nueva G4, 2026-11-15; congelada de nuevo sin cambio de forma en la G4 de la enmienda F5R-02, 2026-11-16) — antes `1.0` |
-| Commit a pinear | `a04431e1dc741acfce305c6f7cfca3cdfa57e96c` (etiqueta `v0.1.0`, rama `main`) |
+| Commit a pinear | `fabf858f81ef477598ada30ccd34bbaf6752ba3e` (etiqueta `v0.2.0`, rama `main`) — antes `a04431e` (v0.1.0) |
 
 ## Etapas
 
@@ -19,8 +19,8 @@
 | 2 | Plan (G2) | aprobada | 2026-11-16 | `doc/plans/` · `portal/DECISION-REQUESTS.md` · `portal/API-PROPOSAL.md` | 3.0.1 |
 | 3 | Prototipo (G3) | aprobada | 2026-11-16 | `portal/ui-spec.json` · `portal/prototype.html` | 3.0.1 |
 | 4 | Decisiones del portal (G4) | aprobada | 2026-11-16 | `D-NN` en el portal · plan `congelado` | 3.0.1 |
-| 5 | Construcción (G5) | pendiente | — | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | — |
-| 6 | Entrega | pendiente | — | commit nuevo + etiqueta (v0.1.0 = `a04431e` sigue integrable) | — |
+| 5 | Construcción (G5) | aprobada | 2026-11-22 | `src/` · `portal/INTEGRATION.md` · `portal/examples/` · `doc/verification/` | 3.0.1 |
+| 6 | Entrega | aprobada | 2026-11-22 | commit `fabf858` + etiqueta `v0.2.0` (antes `a04431e`, v0.1.0) | 3.0.1 |
 
 Estados: `pendiente` · `en curso` · `aprobada` (puerta pasada) · `reabierta`.
 
@@ -237,3 +237,40 @@ Ver `doc/upstream-kit/04-handoff.md` §3 en el portal.
   bloquea: `requests` de `portal/ui-spec.json` solo lista DR-1 … DR-5. Siguiente: `hie-api`,
   fases 7 (validador de `pn_bar`, guarda de U-44, V-12 y V-20) y 8 (0.2.0, ejemplos,
   `INTEGRATION.md`, etiqueta `v0.2.0`), cada una cerrada con `hie-verifier`.
+- 2026-11-16: **fase 7** (rango de `pn_bar` y guarda de U-44) construida en `1430873` … `dea8a8f`;
+  `hie-verifier` **pasa** tras tres rondas (`doc/verification/10-fase-7.md` … `12-fase-7.md`):
+  F7-01 … F7-03 y F7R-01 corregidos; F7-04 (receta adversaria a 0.81 s, por encima del objetivo
+  interno de 0.8 s y por debajo del 1 s del kit) **aceptado por el dueño** y registrado en U-38.
+- 2026-11-22: **fase 8 (entrega 0.2.0)**. Commit `61e1848`: `__version__` 0.2.0, `CHANGELOG.md`
+  0.2.0, tres ejemplos nuevos en `tools/make_examples.py`. Commit `af5c09f`: 15 ejemplos
+  regenerados desde el paquete instalado en un venv limpio de Python 3.12, con `commit` =
+  `61e1848` (los `expected` de los 12 de v0.1.0 no cambian), y `portal/INTEGRATION.md` con
+  `pn_bar` en [1, 100], el 422 de U-44 y la sección «Cambios 0.1.0 → 0.2.0». `hie-verifier`
+  **pasa** (`doc/verification/13-fase-8.md`); menor F8-01 corregido en `fabf858`. `src/` sin
+  cambios desde `dea8a8f`.
+- 2026-11-22: `main` y la etiqueta `v0.2.0` empujadas en `fabf858f81ef477598ada30ccd34bbaf6752ba3e`.
+  Desde GitHub, en un venv nuevo de Python 3.12.10: suite 538 en verde y
+  `tools/make_examples.py --check` con 0 diferencias. `hie-verifier` **pasa** la G5
+  (`doc/verification/14-g5.md`), también con numpy 2.5.4 y pydantic 2.13.4, las versiones del
+  portal. Menores: G5-01 (este archivo aún no registra el pin nuevo; se cierra en la etapa 6),
+  G5-02 (`requests` de `portal/ui-spec.json` solo lista DR-1 … DR-5, de `hie-prototyper`) y G5-03
+  (tabla «Pendiente tras las decisiones» de `portal/DECISION-REQUESTS.md` desfasada, de
+  `hie-architect`).
+- 2026-11-22: **G5 aprobada** por el dueño (`/hie-flow approve 5`). Checklist de `kit 04 §3`
+  sobre `fabf858`: commit y etiqueta empujados; `pip install` desde GitHub en un venv limpio de
+  Python 3.12; suite y ejemplos ejecutados desde lo instalado; ningún DR abierto;
+  `INTEGRATION.md` conforme al código; `src/` sin cambios entre `61e1848` (el commit de los
+  ejemplos) y `fabf858`; `ui-spec.json` válido y con todos sus `contract_path`; informes sin
+  bloqueantes. La casilla «commit a pinear» de este archivo queda para la entrega (etapa 6),
+  igual que en la v0.1.0. Hasta entonces `a04431e` (v0.1.0) sigue siendo la entrega vigente.
+- 2026-11-22: **entrega 0.2.0 (etapa 6).** Commit a pinear
+  `fabf858f81ef477598ada30ccd34bbaf6752ba3e` (el de la nota de G5), etiqueta `v0.2.0`, rama `main`,
+  ambos empujados. Comprobado desde GitHub en un venv nuevo de Python 3.12 (nota de G5 e informe
+  14). Línea para `backend/requirements.txt`:
+  `mainpipe-transient @ git+https://github.com/gustavods14/mainpipe-transient.git@fabf858f81ef477598ada30ccd34bbaf6752ba3e`.
+  Este registro va en un commit posterior al pin, sin cambios en `src/` ni en `portal/examples/`,
+  junto con el cierre de los menores de G5: G5-01 (este registro), G5-02 (`requests` de
+  `portal/ui-spec.json` con DR-1 … DR-10; valida contra `06-ui-spec.schema.json`) y G5-03
+  (tablas «Pendiente…» de `portal/DECISION-REQUESTS.md` al día, por `hie-architect`). El portal
+  instala el paquete desde el pin y lee `portal/` desde `main`. Qué cambia para el portal al pasar
+  de `a04431e` a `fabf858`: `portal/INTEGRATION.md`, sección (f) «Cambios 0.1.0 → 0.2.0».

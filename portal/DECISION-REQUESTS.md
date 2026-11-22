@@ -2,9 +2,11 @@
 
 > Formato y ciclo de vida: `doc/upstream-kit/08-decision-requests.md` en el portal.
 > Lo escribe `hie-architect`. Los estados y las `D-NN` las copia el usuario al volver del portal.
-> Plan de origen: `doc/plans/01-golpe-ariete-v1.md` (kit 3.0.0; aprobado en G2, reabierto y
-> reaprobado el 2026-11-14 con D-57 … D-62; congelado el 2026-11-14 para G4, `SCHEMA_VERSION`
-> `"1.0"`; **de vuelta a borrador** el 2026-11-15 por la enmienda tras G4, con `"2.0"` propuesta).
+> Plan de origen: `doc/plans/01-golpe-ariete-v1.md`. **Estado actual (2026-11-22): congelado**
+> (G4 del 2026-11-16, enmienda F5R-02, kit 3.0.1, `SCHEMA_VERSION` `"2.0"`). Historia: kit 3.0.0;
+> aprobado en G2, reabierto y reaprobado el 2026-11-14 con D-57 … D-62; congelado el 2026-11-14
+> para G4 con `"1.0"`; de vuelta a borrador el 2026-11-15 por la enmienda tras G4; congelado con
+> `"2.0"` el 2026-11-15 (D-63 … D-66) y de nuevo el 2026-11-16 (F5R-02).
 > 2026-11-14: DR-1 y DR-4 reformulados tras aprobar el prototipo (G3) para pedir exactamente lo
 > que proponen `portal/ui-spec.json` y `portal/prototype.html` (U-30). DR-3: contexto y
 > alternativas actualizados al panel aprobado en G3, misma pregunta. DR-2: añadida la palanca de
@@ -39,6 +41,12 @@
 > **Ningún pedido nuevo**: el rango de una entrada y los mensajes de error los decide el upstream
 > (regla central del kit) y no se toca D-57 … D-66 (plan §7, U-45 (4)). Comprobado al re-congelar el
 > plan (G4 del 2026-11-16): DR-1 … DR-10 `resuelto` con su `D-NN`, ninguno `abierto`.
+> 2026-11-22: **corrección de registro** (hallazgo G5-03 de `doc/verification/14-g5.md`). Las dos
+> tablas «Pendiente…» del final se ponen al día con lo construido: todo lo que el portal pidió con
+> D-57 … D-66 está **hecho**. Lo entregó la v0.1.0 (pin `a04431e`; fases 5 y 6, informes
+> `doc/verification/07-fase-5.md`, `08-fase-6.md` y `09-fase-6.md`) y lo vuelve a comprobar la
+> v0.2.0 (`fabf858`, etiqueta `v0.2.0`, G5 aprobada el 2026-11-22; informes `13-fase-8.md` y
+> `14-g5.md`). Sin cambios en ningún DR, D-NN, el contrato ni `SCHEMA_VERSION`; ningún pedido nuevo.
 
 | DR | Pregunta | Categoría | Bloquea | Estado | Decisión |
 |---|---|---|---|---|---|
@@ -602,18 +610,20 @@ por fotograma.
 Lo que el portal pidió al upstream con D-57 a D-62 (commit `2466321` del portal), copiado de su
 respuesta.
 
-**Estado de la incorporación (2026-11-14).** Plan = `doc/plans/01-golpe-ariete-v1.md`.
+**Estado de la incorporación (2026-11-14; filas de la construcción puestas al día el 2026-11-22,
+G5-03).** Plan = `doc/plans/01-golpe-ariete-v1.md`. «v0.1.0» = pin `a04431e`; «v0.2.0» = `fabf858`
+(etiqueta `v0.2.0`), que vuelve a comprobarlo todo (`doc/verification/13-fase-8.md`, `14-g5.md`).
 
 | Punto | Estado | Dónde |
 |---|---|---|
 | D-57: HU-4.1 crit. 1 y F4 sin `frame_flow_lps` | hecho (G1 reaprobada) | `doc/stories/04-serie-reproduccion.md` |
-| D-57: F4 y V-17 sin `frame_flow_lps`; sin opción explícita | hecho en el plan | §1.4, §6 V-17; U-33 (se quita del todo: el portal nunca enviaría la opción) |
-| D-57: U-10, tope min(1001, ⌊50 000 / n_progresivas⌋) | hecho en el plan | §1.4; U-10 vigente |
-| D-57: U-09, `MAX_STEPS` = 10 000 y 422 con la duración máxima | hecho en el plan (HU-1.6 crit. 13 en G1) | §1.3, fase 2; U-09 vigente |
-| D-57: medir JSON del peor caso ≤ 3,5 MB | programado: fase 5 (medición), fase 6 (cifra en `portal/INTEGRATION.md`) | §2, §5, V-18; protocolo U-34 |
-| D-57: medir petición del peor caso ≤ 64 KiB (D-48) | programado: fases 5 y 6, junto a la anterior | §2, §5, V-18; U-34 |
-| D-57: sin redondeo; `frame_stride` se mantiene | hecho en el plan | §1.4; U-10 |
-| D-57: `examples/` con la serie solo en el caso del Excel | hecho en el plan | §5, ejemplos previstos |
+| D-57: F4 y V-17 sin `frame_flow_lps`; sin opción explícita | hecho en el plan y construido (v0.1.0) | plan §1.4, §6 V-17; U-33. `portal/INTEGRATION.md`, `SolveResponse` («No hay `frame_pressure_head_m` ni `frame_flow_lps`») |
+| D-57: U-10, tope min(1001, ⌊50 000 / n_progresivas⌋) | hecho en el plan y construido (v0.1.0), con una sola matriz `frame_*` desde D-65 | plan §1.4; U-10. `portal/INTEGRATION.md`, fila `frame_time_s` y sección (e) |
+| D-57: U-09, `MAX_STEPS` = 10 000 y 422 con la duración máxima | hecho en el plan (HU-1.6 crit. 13 en G1) y construido (fase 2, `doc/verification/03-fase-2.md`) | plan §1.3; U-09. `portal/INTEGRATION.md`, fila `duration_s`; ejemplo `portal/examples/error-tope-de-pasos.json` |
+| D-57: medir JSON del peor caso ≤ 3,5 MB | **hecho**. Medido en la fase 5 de la 1.0 (3 167 900 B, `doc/verification/06-fase-5.md`) y sustituido por las dos recetas de D-65 (3)-(4) en la 2.0 (ver la tabla siguiente): realista 965 887 B, adversaria 2 819 475 B, cota 3 285 874 B. D-57 (1) se da por cumplido para toda entrada solo con la guarda de D-57 (2) del portal en verde (D-65 (4)) | `doc/verification/07-fase-5.md` (V-18 (i)); `portal/INTEGRATION.md` (a) desde la v0.1.0 (`09-fase-6.md`); sin cifras nuevas en la v0.2.0 (`13-fase-8.md`, `14-g5.md`) |
+| D-57: medir petición del peor caso ≤ 64 KiB (D-48) | **hecho**: 19 919 B (19 311 B compacta) ≤ 65 536 B | `doc/verification/07-fase-5.md` (V-18 (ii)); `portal/INTEGRATION.md` (a); repetido en `13-fase-8.md` y `14-g5.md` |
+| D-57: sin redondeo; `frame_stride` se mantiene | «sin redondeo» **sustituido** por D-63 (DR-7 (a)): listas en m y L/s a 3 decimales. `frame_stride` se mantiene (construido, v0.1.0) | plan §1.4; U-39. `portal/INTEGRATION.md`, fila `frame_stride` y sección (b) |
+| D-57: `examples/` con la serie solo en el caso del Excel | hecho en el plan y construido: solo `solve-excel-horizontal` lleva `include_frames: true`; los demás, `false` (12 ejemplos en la v0.1.0, 15 en la v0.2.0) | plan §5; `portal/examples/` |
 | D-58: botón «Ir a t = … s» | Capa 1 sin cambios (los avisos llevan instante; U-36). **Hecho** en `ui-spec.json` / `prototype.html` el 2026-11-14 (G3) | plan §1.5; `ui-spec.json`, `charts[perfil-envolventes].interactions` (el esquema no tiene sitio para acciones en un aviso: hallazgo, plan §8) |
 | D-58 (resto): instante como estado del panel, reinicio con cada resultado, clic/arrastre solo en «Válvula y L/2» y «Caudales», teclado | **hecho** el 2026-11-14 (G3) | `ui-spec.json` / `prototype.html` |
 | D-59: barra de una fila, opaca, sticky solo ≥ lg con `lg:top-20`, estática por debajo | **hecho** el 2026-11-14 (G3) | `ui-spec.json` / `prototype.html` |
@@ -625,8 +635,9 @@ Para la etapa 3 además, **hecho** el 2026-11-14 (G3): el hint de `duration_s` e
 `portal/ui-spec.json` y `portal/prototype.html` dice «tope de 10 000 pasos» (D-57), y la línea del
 límite lee `response.min_allowed_pressure_head_m` (U-35), no el valor del formulario.
 
-Con esto no queda nada pendiente antes de G4. Siguen programadas para la construcción las dos
-mediciones de D-57 (respuesta ≤ 3,5 MB, petición ≤ 64 KiB): fases 5 y 6 del plan, V-18.
+Con esto no queda nada pendiente antes de G4. Las dos mediciones de D-57 (respuesta ≤ 3,5 MB,
+petición ≤ 64 KiB), que quedaban programadas para la construcción, están **hechas** desde la
+v0.1.0 (filas de arriba; 2026-11-22). Nada de esta tabla queda pendiente.
 
 Lista original del portal:
 
@@ -668,23 +679,27 @@ Lista original del portal:
 
 ## Pendiente tras D-63 … D-66 (antes de la nueva G4)
 
-Copiado de las decisiones del portal (2026-11-15). Estado al 2026-11-15, tras la enmienda del
-plan (`hie-architect`): **hecho en el plan** todo lo de `hie-architect`; **pendiente** lo de
-`hie-prototyper` (frase del rojo) y lo de `hie-api` (construcción, fases 5 y 6), cada uno en su
-etapa.
+Copiado de las decisiones del portal (2026-11-15). Estado al 2026-11-22 (puesto al día por G5-03):
+**todo hecho**. Lo de `hie-architect` quedó en el plan el 2026-11-15; lo de `hie-prototyper`, en
+`portal/ui-spec.json` y `portal/prototype.html` el 2026-11-15; lo de `hie-api`, en la construcción
+de la v0.1.0 (pin `a04431e`, fases 5 y 6: `doc/verification/07-fase-5.md`, `08-fase-6.md`,
+`09-fase-6.md`), y lo vuelve a comprobar la v0.2.0 (`fabf858`: `13-fase-8.md`, `14-g5.md`, suite de
+538 en verde desde lo instalado). Las secciones citadas de `portal/INTEGRATION.md` son las del
+commit `fabf858`.
 
 | Punto | Qué | Dónde | Quién | Estado |
 |---|---|---|---|---|
-| D-63 (3)-(4) | Marcador del cruce y extremo en `critical` desde el aviso `danger` de `checks` (`x_m`, `time_s`, `value_m`); tramo rojo opcional sobre la envolvente redondeada, **solo si existe el aviso**. Nunca rojo sin aviso; el único desacuerdo admitido es aviso y marcador sin tramo a < 0.0005 m del umbral | plan §1.5, U-36, V-13; frase del predicado en `ui-spec.json` y `prototype.html` | `hie-architect`, `hie-prototyper` | plan: **hecho** (§1.5 reescrito: PN ↔ `PN_EXCEEDED`, límite ↔ `COLUMN_SEPARATION_RISK`, campos del aviso idénticos al extremo global; U-36; V-13 reescrita). `ui-spec.json` / `prototype.html`: **hecho** el 2026-11-15 (`hie-prototyper`: criterio del rojo y marcadores de `presiones-progresiva`, nota en colores de `perfil-envolventes`; el prototipo dibuja tramo y marcador en `critical` solo con el aviso) |
-| D-63 (5) | Regla de precisión y de comparación (redondear el escalar a 3 decimales o tolerancia 0.0005 m) | `portal/INTEGRATION.md` (fase 6) | `hie-api` | plan: **hecho** (§1.4, regla de comparación; fase 6 (b)). `INTEGRATION.md`: **pendiente** (`hie-api`, fase 6) |
-| D-63 (6) | Los casos dorados congelan los valores redondeados | fase 5 | `hie-api` | plan: **hecho** (fase 5: V-19 sobre la salida de `solve()`; fase 6: V-19 sobre cada ejemplo). Construcción: **pendiente** (`hie-api`, fases 5–6) |
-| D-64 (3) | Declarar como contrato `frame_x_m == x_m` y p/γ(x_j, t_k) = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota z que `pressure_head_*`; mantenerlo probado (`tests/test_frames.py`) | plan §1.4; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§1.4, invariantes 1–3; V-17; U-42). Pruebas e `INTEGRATION.md`: **pendiente** (`hie-api`, fases 5–6) |
-| D-65 (3)-(4) | Medir dos recetas (peor caso realista y magnitudes extremas, ≈ 25 B por número), ambas ≤ 3 500 000 B; publicar cota absoluta y las dos cifras medidas | plan U-34 / §2; fase 5; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§2, fase 5 (5.4), V-18; U-34 (3), (3b), (5) y (6) enmendadas: receta adversaria determinista con ≥ 20 B por número; si una medición supera el techo, se detiene y se pide). Mediciones e `INTEGRATION.md`: **pendiente** (`hie-api`, fases 5–6). F5-01 se cierra cuando las dos estén en verde |
+| D-63 (3)-(4) | Marcador del cruce y extremo en `critical` desde el aviso `danger` de `checks` (`x_m`, `time_s`, `value_m`); tramo rojo opcional sobre la envolvente redondeada, **solo si existe el aviso**. Nunca rojo sin aviso; el único desacuerdo admitido es aviso y marcador sin tramo a < 0.0005 m del umbral | plan §1.5, U-36, V-13; frase del predicado en `ui-spec.json` y `prototype.html` | `hie-architect`, `hie-prototyper` | plan: **hecho** (§1.5 reescrito: PN ↔ `PN_EXCEEDED`, límite ↔ `COLUMN_SEPARATION_RISK`, campos del aviso idénticos al extremo global; U-36; V-13 reescrita). `ui-spec.json` / `prototype.html`: **hecho** el 2026-11-15 (`hie-prototyper`: criterio del rojo y marcadores de `presiones-progresiva`, nota en colores de `perfil-envolventes`; el prototipo dibuja tramo y marcador en `critical` solo con el aviso). Construcción: **hecha** en la v0.1.0; regla publicada en `portal/INTEGRATION.md` (c) y comprobada en `solve-pn-superado` (`doc/verification/08-fase-6.md`, fila (c)) |
+| D-63 (5) | Regla de precisión y de comparación (redondear el escalar a 3 decimales o tolerancia 0.0005 m) | `portal/INTEGRATION.md` (fase 6) | `hie-api` | plan: **hecho** (§1.4, regla de comparación; fase 6 (b)). `INTEGRATION.md`: **hecho** en la v0.1.0, sección (b) (`doc/verification/08-fase-6.md` y `09-fase-6.md`, fila (b): coincide con el redondeo de `_solve.py`); sigue igual en la v0.2.0 (`14-g5.md`, `INTEGRATION.md` conforme al código) |
+| D-63 (6) | Los casos dorados congelan los valores redondeados | fase 5 | `hie-api` | plan: **hecho** (fase 5: V-19 sobre la salida de `solve()`; fase 6: V-19 sobre cada ejemplo). Construcción: **hecha** en la v0.1.0: V-19 sobre `solve()` en `tests/test_precision.py` (`07-fase-5.md`) y sobre los 6 ejemplos de éxito, 0 valores sin redondear (`08-fase-6.md`, `09-fase-6.md`); `portal/INTEGRATION.md` (e). En la v0.2.0 los `expected` de los 12 ejemplos no cambian (`13-fase-8.md`) y los 15 se reproducen exactos desde lo instalado (`14-g5.md`) |
+| D-64 (3) | Declarar como contrato `frame_x_m == x_m` y p/γ(x_j, t_k) = `frame_head_m[k][j]` − `elevation_m[j]` con la misma cota z que `pressure_head_*`; mantenerlo probado (`tests/test_frames.py`) | plan §1.4; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§1.4, invariantes 1–3; V-17; U-42). Pruebas: **hechas** en la v0.1.0, `tests/test_frames.py` (V-17 en verde, `07-fase-5.md`). `INTEGRATION.md`: **hecho**, sección (d), invariantes 1–3 y nota para el test de D-64 (2) (`08-fase-6.md` fila (d), medido en `solve-excel-horizontal`; `09-fase-6.md`). La v0.2.0 los vuelve a pasar (suite de 538, `14-g5.md`) |
+| D-65 (3)-(4) | Medir dos recetas (peor caso realista y magnitudes extremas, ≈ 25 B por número), ambas ≤ 3 500 000 B; publicar cota absoluta y las dos cifras medidas | plan U-34 / §2; fase 5; `portal/INTEGRATION.md` | `hie-architect`, `hie-api` | plan: **hecho** (§2, fase 5 (5.4), V-18; U-34 (3), (3b), (5) y (6) enmendadas: receta adversaria determinista con ≥ 20 B por número; si una medición supera el techo, se detiene y se pide). Mediciones: **hechas** en la v0.1.0 (`07-fase-5.md`, V-18): realista 965 887 B (peor del barrido), adversaria 2 819 475 B (22.37 B por número), cota 3 285 874 B; no se abrió pedido. `INTEGRATION.md`: **hecho**, sección (a), con la frase de D-65 (4) (F6-02 cerrado en `09-fase-6.md`). **F5-01 cerrado**. La v0.2.0 repite las cifras sin cambios (`13-fase-8.md`, `14-g5.md`) |
 | D-66 | Retirar U-32 (texto de fase) | plan; `ui-spec.json` ya lo retiró en G3 | `hie-architect` | **hecho** (U-32 retirada; plan §7) |
 | Opcional | `frame_x_m` repite `x_m` (≈ 5 kB); el portal sugiere que podría quitarse. No registrado como decisión | plan, si el dueño lo quiere | dueño | **cerrado**: el dueño decide **mantenerlo** (U-42); el contrato lo declara idéntico a `x_m` |
 
 Nota para el portal (no cambia ninguna decisión): D-64 (2) indexa la serie de la válvula con
 k·`frame_stride`. Es exacto en el fixture que nombra (caso del Excel, sin submuestreo); con
 submuestreo el último fotograma es el paso `n_steps` (en la receta del peor caso, 69·145 = 10 005
-≠ 10 000). La regla general, que publicará `portal/INTEGRATION.md`, es el índice i_k con
-`time_s[i_k]` == `frame_time_s[k]` (plan §1.4, invariante 3).
+≠ 10 000). La regla general, publicada en `portal/INTEGRATION.md` (d) (invariante 3 y «Nota
+para el test de D-64 (2)») desde la v0.1.0, es el índice i_k con `time_s[i_k]` ==
+`frame_time_s[k]` (plan §1.4, invariante 3).
